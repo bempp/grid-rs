@@ -73,6 +73,7 @@ pub trait ReferenceCell {
     ///
     /// The first dim components represent the first vertex, the next dim the second vertex, and so on.
     fn vertices<'a>(&'a self) -> std::slice::Iter<'a, usize>;
+    // TODO: Should this iterate over &[Self::T] instead?
 
     /// Ths midpoint of the cell
     fn midpoint(&self, midpoint: &mut [Self::T]);
