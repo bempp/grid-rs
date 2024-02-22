@@ -34,14 +34,14 @@ pub trait Topology {
 
     // NO: If type0 = Point and type1 = Triangle, there will not be the same number of indices for each `type0`
     /// Get the connectivity of entities of type `type0` and entities of type `type1`
-    fn connectivity(&self, type0: ReferenceCellType, type1: ReferenceCellType) -> &[usize];
+    // fn connectivity(&self, type0: ReferenceCellType, type1: ReferenceCellType) -> &[usize];
 
     // Alternative not requiring an adjacency list. Possible issue: unable to get connectivity information for all non-cell entities at once
     // This may be ok, as in assembly we're only using the connectivity from cells to vertices, which can be obtained via cell_entities.
     /// Get the indices of entities of type `etype` that are connected to each cell of type `cell_type`
     fn cell_entities(&self, cell_type: ReferenceCellType, etype: ReferenceCellType) -> &[usize];
-    /// Get the indices of entities of type `type1` that are connected to the entity of type `type0` with index `index`
-    fn connectivity(&self, type0: ReferenceCellType, index: usize, type1: ReferenceCellType) -> &[usize];
+    /// Get the indices of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
+    fn connectivity(&self, etype: ReferenceCellType, index: usize, dim: usize) -> &[usize];
 
     /// Get the ownership of a mesh entity
     fn entity_ownership(&self, dim: usize, index: usize) -> Ownership;
