@@ -28,6 +28,7 @@ impl<T: Float> ReferenceCell for Interval<T> {
         true
     }
     fn vertices<'a>(&'a self) -> std::slice::Iter<'a, &[Self::T]> {
+        // TODO
         [].iter()
         //[self.vertices[0..1], self.vertices[1..2]].iter()
     }
@@ -44,6 +45,7 @@ impl<T: Float> ReferenceCell for Interval<T> {
         &[]
     }
     fn entity_types(&self, cell_index: usize, dim: usize) -> ReferenceCellType {
+        // TODO
         ReferenceCellType::Interval
     }
     fn vertex_count(&self) -> usize {
@@ -63,6 +65,7 @@ impl<T: Float> ReferenceCell for Interval<T> {
         entity_dim: usize,
         entity_number: usize,
     ) -> Result<std::slice::Iter<'_, usize>, InvalidConnectivity> {
+        // TODO
         Err(InvalidConnectivity)
     }
     fn connected_edges(
@@ -70,6 +73,7 @@ impl<T: Float> ReferenceCell for Interval<T> {
         entity_dim: usize,
         entity_number: usize,
     ) -> Result<std::slice::Iter<'_, (usize, usize)>, InvalidConnectivity> {
+        // TODO
         Err(InvalidConnectivity)
     }
     fn connected_faces(
@@ -77,9 +81,11 @@ impl<T: Float> ReferenceCell for Interval<T> {
         entity_dim: usize,
         entity_number: usize,
     ) -> Result<std::slice::Iter<'_, &[usize]>, InvalidConnectivity> {
+        // TODO
         Err(InvalidConnectivity)
     }
     fn cell_type(&self) -> ReferenceCellType {
+        // TODO
         ReferenceCellType::Interval
     }
     fn label(&self) -> &'static str {
