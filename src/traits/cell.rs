@@ -30,8 +30,8 @@ pub enum ReferenceCellType {
 // <start>
 //To discuss with Timo:
 // In Basix, all cell information is obtained via free functions, eg:
-fn dim(cell: ReferenceCellType) {
-    match(cell) {
+pub fn dim(cell: ReferenceCellType) -> usize {
+    match cell {
         ReferenceCellType::Point => 0,
         ReferenceCellType::Interval => 1,
         ReferenceCellType::Triangle => 2,
@@ -42,8 +42,8 @@ fn dim(cell: ReferenceCellType) {
         ReferenceCellType::Pyramid => 3,
     }
 }
-fn is_simplex(cell: ReferenceCellType) {
-    match(cell) {
+pub fn is_simplex(cell: ReferenceCellType) -> bool {
+    match cell {
         ReferenceCellType::Point => true,
         ReferenceCellType::Interval => true,
         ReferenceCellType::Triangle => true,
