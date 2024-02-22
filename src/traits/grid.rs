@@ -93,3 +93,22 @@ pub trait Geometry {
     // ... or would it be better to replace the above 3 functions with an Iter?
     fn elements_and_cells(&self) -> std::slice::Iter<'_, (&Self::Element, &[usize])>;
 }
+
+/// A grid
+pub trait Grid {
+    /// The type that implements [Topology]
+    type Topology: Topology;
+
+    /// The type that implements [Geometry]
+    type Geometry: Geometry;
+
+    /// Get the grid topology (See [Topology])
+    fn topology(&self) -> &Self::Topology;
+
+    /// Get the grid geometry (See [Geometry])
+    fn geometry(&self) -> &Self::Geometry;
+
+    // Check if the grid is stored in serial
+    fn is_serial(&self) -> bool;
+}
+
