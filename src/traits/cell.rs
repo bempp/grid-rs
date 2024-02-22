@@ -74,6 +74,8 @@ pub trait ReferenceCell {
     /// The first dim components represent the first vertex, the next dim the second vertex, and so on.
     fn vertices<'a>(&'a self) -> std::slice::Iter<'a, &[Self::T]>;
 
+    // <start>
+    // edges() and faces() just iterate through connected_edges(0)..connected_edges(n-1) [and /r/edges/faces/]. Should we remove these?
     /// The edges of the cell
     ///
     /// The first 2 components are the vertex numbers of the endpoints of the first edge, the next 2 the second edge, and so on.
@@ -83,9 +85,7 @@ pub trait ReferenceCell {
     ///
     /// The first `self.faces_nvertices()[0]` components are the vertex numbers of vertices of the first face, the next `self.faces_nvertices()[1]` the second face, and so on.
     fn faces(&self) -> std::slice::Iter<'_, &[usize]>;
-
-    /// The number of vertices adjacent to each face
-    fn faces_nvertices(&self) -> &[usize];
+    // <end>
 
     /// The number of entities of dimension `dim`
     fn entity_count(&self, dim: usize) -> usize {
