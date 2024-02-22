@@ -40,7 +40,7 @@ pub trait ReferenceCell {
     /// The vertices of the cell
     ///
     /// The first dim components represent the first vertex, the next dim the second vertex, and so on.
-    fn vertices<'a>(&'a self) -> std::slice::Iter<'a, usize>;
+    fn vertices<'a>(&'a self) -> std::slice::Iter<'a, &[Self::T]>;
 
     /// Ths midpoint of the cell
     fn midpoint(&self, midpoint: &mut [Self::T]);
