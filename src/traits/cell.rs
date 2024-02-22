@@ -16,19 +16,19 @@ impl std::error::Error for InvalidConnectivity {}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 #[repr(u8)]
-pub enum ReferenceCellType {
-    Point = 0,
-    Interval = 1,
-    Triangle = 2,
-    Quadrilateral = 3,
-    Tetrahedron = 4,
-    Hexahedron = 5,
-    Prism = 6,
-    Pyramid = 7,
+pub enum CellType {
+    Point,
+    Interval,
+    Triangle,
+    Quadrilateral,
+    Tetrahedron,
+    Hexahedron,
+    Prism,
+    Pyramid,
 }
 
 /// A 0- to 3- dimensional reference cell
-pub trait ReferenceCell {
+pub trait Cell {
     type T: Float;
 
     /// The dimension of the reference cell (eg a triangle's dimension is 2, tetrahedron's dimension is 3)
@@ -39,8 +39,7 @@ pub trait ReferenceCell {
 
     /// The vertices of the cell
     ///
-    /// The first dim components represent the first vertex, the next dim the second vertex, and so on.
-    fn vertices<'a>(&'a self) -> std::slice::Iter<'a, usize>;
+    fn vertices(&self) -> std::slice::Iter<'_, usize>;
 
     /// Ths midpoint of the cell
     fn midpoint(&self, midpoint: &mut [Self::T]);
@@ -70,7 +69,7 @@ pub trait ReferenceCell {
     }
 
     /// The cell type of the entity with dimension `dim` and cell index `index`.
-    fn entity_types(&self, cell_index: usize, dim: usize) -> ReferenceCellType;
+    fn entity_types(&self, cell_index: usize, dim: usize) -> CellType;
 
     /// The number of vertices
     fn vertex_count(&self) -> usize;
@@ -107,8 +106,5 @@ pub trait ReferenceCell {
     ) -> Result<std::slice::Iter<'_, &[usize]>, InvalidConnectivity>;
 
     /// The reference cell type
-    fn cell_type(&self) -> ReferenceCellType;
-
-    /// The reference cell label
-    fn label(&self) -> &'static str;
+    fn cell_type(&self) -> CellType;
 }
