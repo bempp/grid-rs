@@ -47,7 +47,7 @@ pub trait FiniteElement {
     fn cell_type(&self) -> ReferenceCellType;
 
     /// The highest degree polynomial in the element's polynomial set
-    fn highest_degree(&self) -> usize;
+    fn embedded_superdegree(&self) -> usize;
 
     /// The number of basis functions
     fn dim(&self) -> usize;
