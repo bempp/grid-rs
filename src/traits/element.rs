@@ -2,6 +2,7 @@
 
 use crate::traits::cell::ReferenceCellType;
 use num::traits::Float;
+use cauchy::Scalar;
 
 /// The type of continuity
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -38,13 +39,12 @@ fn compute_derivative_count(nderivs: usize, cell_type: ReferenceCellType) -> usi
 /// A finite element defined on a reference cell
 pub trait FiniteElement {
 
-    type T: Float;
+    // TODO: do we want to allow complex types here? I think probably yes
+    // Although basis functions are always real-valued, so when complex the imaginary part will always be 0j
+    type T: Scalar;
 
     /// The reference cell type
     fn cell_type(&self) -> ReferenceCellType;
-
-    /// The polynomial degree
-    fn degree(&self) -> usize;
 
     /// The highest degree polynomial in the element's polynomial set
     fn highest_degree(&self) -> usize;
@@ -62,9 +62,9 @@ pub trait FiniteElement {
     fn value_size(&self) -> usize;
 
     /// Tabulate the values of the basis functions and their derivatives at a set of points
-    fn tabulate<PointT: Float>(
+    fn tabulate<PointType: Float>(
         &self,
-        points: &[PointT],
+        points: &[PointType],
         nderivs: usize,
         data: &mut [Self::T],
     );
