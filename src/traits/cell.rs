@@ -27,6 +27,38 @@ pub enum ReferenceCellType {
     Pyramid = 7,
 }
 
+// <start>
+//To discuss with Timo:
+// In Basix, all cell information is obtained via free functions, eg:
+fn dim(cell: ReferenceCellType) {
+    match(cell) {
+        ReferenceCellType::Point => 0,
+        ReferenceCellType::Interval => 1,
+        ReferenceCellType::Triangle => 2,
+        ReferenceCellType::Quadrilateral => 2,
+        ReferenceCellType::Tetrahedron => 3,
+        ReferenceCellType::Hexahedron => 3,
+        ReferenceCellType::Prism => 3,
+        ReferenceCellType::Pyramid => 3,
+    }
+}
+fn is_simplex(cell: ReferenceCellType) {
+    match(cell) {
+        ReferenceCellType::Point => true,
+        ReferenceCellType::Interval => true,
+        ReferenceCellType::Triangle => true,
+        ReferenceCellType::Quadrilateral => false,
+        ReferenceCellType::Tetrahedron => true,
+        ReferenceCellType::Hexahedron => false,
+        ReferenceCellType::Prism => false,
+        ReferenceCellType::Pyramid => false,
+    }
+}
+// This is ok, as these functions should only be called rarely, and means we don't have to
+// convert a ReferenceCellType to a struct whenever we need one of these functions.
+// Another question: should we implement these in the same file as we define the enum?
+// <end>
+
 /// A 0- to 3- dimensional reference cell
 pub trait ReferenceCell {
     type T: Float;
