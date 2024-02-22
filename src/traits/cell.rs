@@ -72,11 +72,7 @@ pub trait ReferenceCell {
     /// The vertices of the cell
     ///
     /// The first dim components represent the first vertex, the next dim the second vertex, and so on.
-    fn vertices<'a>(&'a self) -> std::slice::Iter<'a, usize>;
-    // TODO: Should this iterate over &[Self::T] instead?
-
-    /// Ths midpoint of the cell
-    fn midpoint(&self, midpoint: &mut [Self::T]);
+    fn vertices<'a>(&'a self) -> std::slice::Iter<'a, &[Self::T]>;
 
     /// The edges of the cell
     ///
@@ -117,27 +113,26 @@ pub trait ReferenceCell {
     /// The number of volumes
     fn volume_count(&self) -> usize;
 
-    /// Get the entities connected to an entity
-    ///
-    /// This function returns a list of entity numbers of entities of dimension `connected_dim` that are attached to the entity numbered `entity_dim` of number entity_number.
-    /// For example connectivity(1, 0, 2) will return a list of faces (2D entities) that are connected to edge (1D entity) 0.
+    /// The indices of the vertices connected to the entity of dimension `entity_dim` and index `enttity_number`
     fn connected_vertices(
         &self,
         entity_dim: usize,
         entity_number: usize,
     ) -> Result<std::slice::Iter<'_, usize>, InvalidConnectivity>;
 
+    /// The indices of the edges connected to the entity of dimension `entity_dim` and index `enttity_number`
     fn connected_edges(
         &self,
         entity_dim: usize,
         entity_number: usize,
-    ) -> Result<std::slice::Iter<'_, (usize, usize)>, InvalidConnectivity>;
+    ) -> Result<std::slice::Iter<'_, usize>, InvalidConnectivity>;
 
+    /// The indices of the faces connected to the entity of dimension `entity_dim` and index `enttity_number`
     fn connected_faces(
         &self,
         entity_dim: usize,
         entity_number: usize,
-    ) -> Result<std::slice::Iter<'_, &[usize]>, InvalidConnectivity>;
+    ) -> Result<std::slice::Iter<'_, usize>, InvalidConnectivity>;
 
     /// The reference cell type
     fn cell_type(&self) -> ReferenceCellType;
