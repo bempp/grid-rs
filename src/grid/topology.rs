@@ -349,13 +349,6 @@ mod test {
         SerialTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2])
     }
 
-    /*fn example_topology_mixed() -> SerialTopology {
-        SerialTopology::new(
-            &[0, 1, 3, 4, 1, 2, 4],
-            &[ReferenceCellType::Quadrilateral, ReferenceCellType::Triangle],
-        )
-    }*/
-
     #[test]
     fn test_counts() {
         let t = example_topology();
@@ -456,6 +449,163 @@ mod test {
         }
 
         for (id, faces) in [vec![0, 1], vec![0], vec![0], vec![1], vec![1]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Interval, id, 2).unwrap();
+            assert_eq!(c, faces);
+        }
+    }
+
+    fn example_topology_mixed() -> SerialTopology {
+        SerialTopology::new(
+            &[0, 1, 3, 4, 1, 2, 4],
+            &[
+                ReferenceCellType::Quadrilateral,
+                ReferenceCellType::Triangle,
+            ],
+        )
+    }
+
+    #[test]
+    fn test_mixed_counts() {
+        let t = example_topology_mixed();
+        assert_eq!(t.dim(), 2);
+        assert_eq!(t.entity_count(0), 5);
+        assert_eq!(t.entity_count(1), 6);
+        assert_eq!(t.entity_count(2), 2);
+    }
+
+    #[test]
+    fn test_mixed_cell_entities_points() {
+        let t = example_topology_mixed();
+        let c = t
+            .cell_entities(ReferenceCellType::Quadrilateral, ReferenceCellType::Point)
+            .unwrap();
+        assert_eq!(c.len(), 4);
+        // cell 0
+        assert_eq!(c[0], 0);
+        assert_eq!(c[1], 1);
+        assert_eq!(c[2], 3);
+        assert_eq!(c[3], 4);
+
+        let c = t
+            .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Point)
+            .unwrap();
+        assert_eq!(c.len(), 3);
+        // cell 1
+        assert_eq!(c[0], 1);
+        assert_eq!(c[1], 2);
+        assert_eq!(c[2], 4);
+    }
+
+    #[test]
+    fn test_mixed_cell_entities_intervals() {
+        let t = example_topology_mixed();
+        let c = t
+            .cell_entities(
+                ReferenceCellType::Quadrilateral,
+                ReferenceCellType::Interval,
+            )
+            .unwrap();
+        assert_eq!(c.len(), 4);
+        // cell 0
+        assert_eq!(c[0], 0);
+        assert_eq!(c[1], 1);
+        assert_eq!(c[2], 2);
+        assert_eq!(c[3], 3);
+
+        let c = t
+            .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Interval)
+            .unwrap();
+        assert_eq!(c.len(), 3);
+        // cell 1
+        assert_eq!(c[3], 4);
+        assert_eq!(c[4], 2);
+        assert_eq!(c[5], 5);
+    }
+    #[test]
+    fn test_mixed_cell_entities_triangles() {
+        let t = example_topology_mixed();
+        let c = t
+            .cell_entities(
+                ReferenceCellType::Quadrilateral,
+                ReferenceCellType::Triangle,
+            )
+            .unwrap();
+        assert_eq!(c.len(), 1);
+        // cell 0
+        assert_eq!(c[0], 0);
+
+        let c = t
+            .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Triangle)
+            .unwrap();
+        assert_eq!(c.len(), 1);
+        // cell 1
+        assert_eq!(c[0], 0);
+    }
+    #[test]
+    fn test_mixed_vertex_connectivity() {
+        let t = example_topology_mixed();
+
+        for (id, vertices) in [vec![0], vec![1], vec![2], vec![3], vec![4]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Point, id, 0).unwrap();
+            assert_eq!(c, vertices);
+        }
+
+        for (id, edges) in [
+            vec![0, 1],
+            vec![0, 2, 5],
+            vec![4, 5],
+            vec![1, 3],
+            vec![2, 3, 4],
+        ]
+        .iter()
+        .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Point, id, 1).unwrap();
+            assert_eq!(c, edges);
+        }
+
+        for (id, faces) in [vec![0], vec![0, 1], vec![1], vec![0], vec![0, 1]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Point, id, 2).unwrap();
+            assert_eq!(c, faces);
+        }
+    }
+    #[test]
+    fn test_mixed_edge_connectivity() {
+        let t = example_topology_mixed();
+
+        for (id, vertices) in [
+            vec![0, 1],
+            vec![0, 3],
+            vec![1, 4],
+            vec![3, 4],
+            vec![2, 4],
+            vec![1, 2],
+        ]
+        .iter()
+        .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Interval, id, 0).unwrap();
+            assert_eq!(c, vertices);
+        }
+
+        for (id, edges) in [vec![0], vec![1], vec![2], vec![3], vec![4], vec![5]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Interval, id, 1).unwrap();
+            assert_eq!(c, edges);
+        }
+
+        for (id, faces) in [vec![0], vec![0], vec![0, 1], vec![0], vec![1], vec![1]]
             .iter()
             .enumerate()
         {
