@@ -11,7 +11,8 @@ use bempp_traits::cell::ReferenceCell;
 /// Topology of a serial grid
 pub struct SerialTopology {
     dim: usize,
-    connectivity: Vec<Vec<AdjacencyList<usize>>>,
+    connectivity: Vec<Vec<Vec<Vec<usize>>>>,
+    cell_connectivity: Vec<Vec<usize>>, // TODO: get rid of this input
     index_map: Vec<usize>,
     starts: Vec<usize>,
     cell_types: Vec<ReferenceCellType>,
@@ -37,25 +38,25 @@ impl SerialTopology {
         let mut vertices = vec![];
         let mut starts = vec![];
         let mut cell_types_new = vec![];
-        let dim = get_reference_cell(cell_types[0]).dim();
+        let dim = reference_cell::dim(cell_types[0]);
 
         let mut connectivity = vec![];
         for i in 0..dim + 1 {
             connectivity.push(vec![]);
             for _j in 0..dim + 1 {
-                connectivity[i].push(AdjacencyList::<usize>::new());
+                connectivity[i].push(vec![]);
             }
         }
 
         // dim0 = dim, dim1 = 0
         for c in cell_types {
-            if dim != get_reference_cell(*c).dim() {
+            if dim != reference_cell::dim(*c) {
                 panic!("Grids with cells of mixed topological dimension not supported.");
             }
             if !cell_types_new.contains(c) {
-                starts.push(connectivity[dim][0].num_rows());
+                starts.push(connectivity[dim][0].len());
                 cell_types_new.push(*c);
-                let n = get_reference_cell(*c).vertex_count();
+                let n = reference_cell::entity_counts(*c)[0];
                 for (i, cell) in cells.iter_rows().enumerate() {
                     if cell_types[i] == *c {
                         index_map.push(i);
@@ -67,7 +68,7 @@ impl SerialTopology {
                             }
                             row.push(vertices.iter().position(|&r| r == *v).unwrap());
                         }
-                        connectivity[dim][0].add_row(&row);
+                        connectivity[dim][0].push(row);
                     }
                 }
             }
@@ -75,7 +76,7 @@ impl SerialTopology {
 
         // dim1 == 0
         for dim0 in 1..dim {
-            let mut cty = AdjacencyList::<usize>::new();
+            let mut cty: Vec<Vec<usize>> = vec![];
             let cells = &connectivity[dim][0];
             for (i, cell_type) in cell_types_new.iter().enumerate() {
                 let ref_cell = get_reference_cell(*cell_type);
@@ -85,23 +86,22 @@ impl SerialTopology {
 
                 let cstart = starts[i];
                 let cend = if i == starts.len() - 1 {
-                    connectivity[2][0].num_rows()
+                    connectivity[2][0].len()
                 } else {
                     starts[i + 1]
                 };
-                for c in cstart..cend {
-                    let cell = cells.row(c).unwrap();
+                for cell in cells.iter().take(cend).skip(cstart) {
                     for e in &ref_entities {
                         let vertices = e.iter().map(|x| cell[*x]).collect::<Vec<usize>>();
                         let mut found = false;
-                        for entity in cty.iter_rows() {
+                        for entity in &cty {
                             if all_equal(entity, &vertices) {
                                 found = true;
                                 break;
                             }
                         }
                         if !found {
-                            cty.add_row(&vertices);
+                            cty.push(vertices);
                         }
                     }
                 }
@@ -111,9 +111,9 @@ impl SerialTopology {
 
         // dim0 == dim1 == 0
         let mut nvertices = 0;
-        let mut cty = AdjacencyList::<usize>::new();
+        let mut cty = vec![];
         let cells = &connectivity[dim][0];
-        for cell in cells.iter_rows() {
+        for cell in cells {
             for j in cell {
                 if *j >= nvertices {
                     nvertices = *j + 1;
@@ -121,30 +121,30 @@ impl SerialTopology {
             }
         }
         for i in 0..nvertices {
-            cty.add_row(&[i]);
+            cty.push(vec![i]);
         }
         connectivity[0][0] = cty;
 
         // dim0 == dim1
         for (dim0, c) in connectivity.iter_mut().enumerate().skip(1) {
-            for i in 0..c[0].num_rows() {
-                c[dim0].add_row(&[i]);
+            for i in 0..c[0].len() {
+                c[dim0].push(vec![i]);
             }
         }
 
         // dim0 == dim
         for dim1 in 1..dim + 1 {
-            let mut cty = AdjacencyList::<usize>::new();
+            let mut cty = vec![];
             let entities0 = &connectivity[dim][0];
             let entities1 = &connectivity[dim1][0];
 
-            let mut sub_cell_types = vec![ReferenceCellType::Point; entities0.num_rows()];
+            let mut sub_cell_types = vec![ReferenceCellType::Point; entities0.len()];
             for (i, cell_type) in cell_types_new.iter().enumerate() {
                 let etypes = &reference_cell::entity_types(*cell_type)[dim];
 
                 let cstart = starts[i];
                 let cend = if i == starts.len() - 1 {
-                    connectivity[2][0].num_rows()
+                    connectivity[2][0].len()
                 } else {
                     starts[i + 1]
                 };
@@ -152,7 +152,7 @@ impl SerialTopology {
                     *t = etypes[0];
                 }
             }
-            for (ei, entity0) in entities0.iter_rows().enumerate() {
+            for (ei, entity0) in entities0.iter().enumerate() {
                 let entity = get_reference_cell(sub_cell_types[ei]);
                 let mut row = vec![];
                 for i in 0..entity.entity_count(dim1) {
@@ -162,43 +162,43 @@ impl SerialTopology {
                         .iter()
                         .map(|x| entity0[*x])
                         .collect::<Vec<usize>>();
-                    for (j, entity1) in entities1.iter_rows().enumerate() {
+                    for (j, entity1) in entities1.iter().enumerate() {
                         if all_equal(&vertices, entity1) {
                             row.push(j);
                             break;
                         }
                     }
                 }
-                cty.add_row(&row);
+                cty.push(row);
             }
-            connectivity[dim][dim1] = cty
+            connectivity[dim][dim1] = cty;
         }
 
         // dim1 < dim0
         for dim1 in 1..dim + 1 {
             for dim0 in dim1 + 1..dim {
-                let mut cty = AdjacencyList::<usize>::new();
+                let mut cty = vec![];
                 let entities0 = &connectivity[dim0][0];
                 let entities1 = &connectivity[dim1][0];
                 let cell_to_entities0 = &connectivity[dim][dim0];
 
-                let mut sub_cell_types = vec![ReferenceCellType::Point; entities0.num_rows()];
+                let mut sub_cell_types = vec![ReferenceCellType::Point; entities0.len()];
                 for (i, cell_type) in cell_types_new.iter().enumerate() {
                     let etypes = &reference_cell::entity_types(*cell_type)[dim0];
 
                     let cstart = starts[i];
                     let cend = if i == starts.len() - 1 {
-                        connectivity[2][0].num_rows()
+                        connectivity[2][0].len()
                     } else {
                         starts[i + 1]
                     };
-                    for c in cstart..cend {
-                        for (e, t) in cell_to_entities0.row(c).unwrap().iter().zip(etypes) {
+                    for ces in cell_to_entities0.iter().take(cend).skip(cstart) {
+                        for (e, t) in ces.iter().zip(etypes) {
                             sub_cell_types[*e] = *t;
                         }
                     }
                 }
-                for (ei, entity0) in entities0.iter_rows().enumerate() {
+                for (ei, entity0) in entities0.iter().enumerate() {
                     let entity = get_reference_cell(sub_cell_types[ei]);
                     let mut row = vec![];
                     for i in 0..entity.entity_count(dim1) {
@@ -208,14 +208,14 @@ impl SerialTopology {
                             .iter()
                             .map(|x| entity0[*x])
                             .collect::<Vec<usize>>();
-                        for (j, entity1) in entities1.iter_rows().enumerate() {
+                        for (j, entity1) in entities1.iter().enumerate() {
                             if all_equal(&vertices, entity1) {
                                 row.push(j);
                                 break;
                             }
                         }
                     }
-                    cty.add_row(&row);
+                    cty.push(row);
                 }
                 connectivity[dim0][dim1] = cty;
             }
@@ -224,14 +224,14 @@ impl SerialTopology {
         // dim1 > dim0
         for dim1 in 1..dim + 1 {
             for dim0 in 0..dim1 {
-                let mut data = vec![vec![]; connectivity[dim0][0].num_rows()];
-                for (i, row) in connectivity[dim1][dim0].iter_rows().enumerate() {
+                let mut data = vec![vec![]; connectivity[dim0][0].len()];
+                for (i, row) in connectivity[dim1][dim0].iter().enumerate() {
                     for v in row {
                         data[*v].push(i);
                     }
                 }
                 for row in data {
-                    connectivity[dim0][dim1].add_row(&row);
+                    connectivity[dim0][dim1].push(row);
                 }
             }
         }
@@ -248,9 +248,19 @@ impl SerialTopology {
             }
         }
 
+        let mut cell_connectivity = vec![];
+        for i in 0..dim + 1 {
+            let mut all = vec![];
+            for c in &connectivity[dim][i] {
+                all.extend_from_slice(c)
+            }
+            cell_connectivity.push(all);
+        }
+
         Self {
             dim,
             connectivity,
+            cell_connectivity,
             index_map,
             starts,
             cell_types: cell_types_new,
@@ -277,8 +287,6 @@ fn all_in(a: &[usize], b: &[usize]) -> bool {
 }
 
 impl Topology for SerialTopology {
-    //type Connectivity = AdjacencyList<usize>;
-
     fn dim(&self) -> usize {
         self.dim
     }
@@ -286,11 +294,11 @@ impl Topology for SerialTopology {
         &self.index_map
     }
     fn entity_count(&self, dim: usize) -> usize {
-        self.connectivity[dim][0].num_rows()
+        self.connectivity[dim][0].len()
     }
     fn cell(&self, index: usize) -> Option<&[usize]> {
         if index < self.entity_count(self.dim) {
-            Some(self.connectivity[self.dim][0].row(index).unwrap())
+            Some(&self.connectivity[self.dim][0][index])
         } else {
             None
         }
@@ -298,7 +306,7 @@ impl Topology for SerialTopology {
     fn cell_type(&self, index: usize) -> Option<ReferenceCellType> {
         for (i, start) in self.starts.iter().enumerate() {
             let end = if i == self.starts.len() - 1 {
-                self.connectivity[2][0].num_rows()
+                self.connectivity[2][0].len()
             } else {
                 self.starts[i + 1]
             };
@@ -320,12 +328,12 @@ impl Topology for SerialTopology {
         etype: ReferenceCellType,
     ) -> Option<&[usize]> {
         // TODO
-        Some(&self.connectivity[self.dim][reference_cell::dim(etype)].data)
+        Some(&self.cell_connectivity[reference_cell::dim(etype)])
     }
 
     /// Get the indices of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
     fn connectivity(&self, etype: ReferenceCellType, index: usize, dim: usize) -> Option<&[usize]> {
-        self.connectivity[reference_cell::dim(etype)][dim].row(index)
+        Some(&self.connectivity[reference_cell::dim(etype)][dim][index])
     }
 
     fn entity_ownership(&self, _dim: usize, _index: usize) -> Ownership {
@@ -340,14 +348,14 @@ mod test {
     fn example_topology() -> SerialTopology {
         SerialTopology::new(
             &AdjacencyList::from_data(vec![0, 1, 2, 2, 1, 3], vec![0, 3, 6]),
-            &vec![ReferenceCellType::Triangle; 2],
+            &[ReferenceCellType::Triangle; 2],
         )
     }
 
     /*fn example_topology_mixed() -> SerialTopology {
         SerialTopology::new(
             &AdjacencyList::from_data(vec![0, 1, 3, 4, 1, 2, 4], vec![0, 4, 7]),
-            &vec![ReferenceCellType::Quadrilateral, ReferenceCellType::Triangle],
+            &[ReferenceCellType::Quadrilateral, ReferenceCellType::Triangle],
         )
     }*/
 
