@@ -1,7 +1,7 @@
 //! Implementation of grid topology
 
 use crate::grid::traits::{Ownership, Topology};
-use crate::reference_cell::{entity_counts, entity_types};
+use crate::reference_cell::{dim, entity_counts, entity_types};
 use crate::traits::cell::ReferenceCellType;
 use bempp_element::cell;
 use bempp_tools::arrays::AdjacencyList;
@@ -317,10 +317,10 @@ impl Topology for SerialTopology {
     fn cell_entities(
         &self,
         _cell_type: ReferenceCellType,
-        _etype: ReferenceCellType,
+        etype: ReferenceCellType,
     ) -> Option<&[usize]> {
         // TODO
-        None
+        Some(&self.connectivity[self.dim][dim(etype)].data)
     }
 
     /// Get the indices of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
@@ -336,4 +336,145 @@ impl Topology for SerialTopology {
     fn entity_ownership(&self, _dim: usize, _index: usize) -> Ownership {
         Ownership::Owned
     }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::grid::topology::*;
+
+    fn example_topology() -> SerialTopology {
+        SerialTopology::new(
+            &AdjacencyList::from_data(vec![0, 1, 2, 2, 1, 3], vec![0, 3, 6]),
+            &vec![ReferenceCellType::Triangle; 2],
+        )
+    }
+
+    /*fn example_topology_mixed() -> SerialTopology {
+        SerialTopology::new(
+            &AdjacencyList::from_data(vec![0, 1, 3, 4, 1, 2, 4], vec![0, 4, 7]),
+            &vec![ReferenceCellType::Quadrilateral, ReferenceCellType::Triangle],
+        )
+    }*/
+
+    #[test]
+    fn test_counts() {
+        let t = example_topology();
+        assert_eq!(t.dim(), 2);
+        assert_eq!(t.entity_count(0), 4);
+        assert_eq!(t.entity_count(1), 5);
+        assert_eq!(t.entity_count(2), 2);
+    }
+
+    #[test]
+    fn test_cell_connectivity_points() {
+        let t = example_topology();
+        let c = t
+            .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Point)
+            .unwrap();
+        assert_eq!(c.len(), 6);
+        // cell 0
+        assert_eq!(c[0], 0);
+        assert_eq!(c[1], 1);
+        assert_eq!(c[2], 2);
+        // cell 1
+        assert_eq!(c[3], 2);
+        assert_eq!(c[4], 1);
+        assert_eq!(c[5], 3);
+    }
+
+    #[test]
+    fn test_cell_connectivity_intervals() {
+        let t = example_topology();
+        let c = t
+            .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Interval)
+            .unwrap();
+        assert_eq!(c.len(), 6);
+        // cell 0
+        assert_eq!(c[0], 0);
+        assert_eq!(c[1], 1);
+        assert_eq!(c[2], 2);
+        // cell 1
+        assert_eq!(c[3], 3);
+        assert_eq!(c[4], 4);
+        assert_eq!(c[5], 0);
+    }
+    #[test]
+    fn test_cell_connectivity_triangles() {
+        let t = example_topology();
+        let c = t
+            .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Triangle)
+            .unwrap();
+        assert_eq!(c.len(), 2);
+        // cell 0
+        assert_eq!(c[0], 0);
+        // cell 1
+        assert_eq!(c[1], 1);
+    }
+    /*
+        fn test_cell_connectivity() {
+            let t = example_topology();
+            assert_eq!(t.connectivity(0, 0).row(0).unwrap().len(), 1);
+            assert_eq!(t.connectivity(0, 0).row(0).unwrap()[0], 0);
+            assert_eq!(t.connectivity(0, 0).row(1).unwrap().len(), 1);
+            assert_eq!(t.connectivity(0, 0).row(1).unwrap()[0], 1);
+            assert_eq!(t.connectivity(0, 0).row(2).unwrap().len(), 1);
+            assert_eq!(t.connectivity(0, 0).row(2).unwrap()[0], 2);
+            assert_eq!(t.connectivity(0, 0).row(3).unwrap().len(), 1);
+            assert_eq!(t.connectivity(0, 0).row(3).unwrap()[0], 3);
+
+            assert_eq!(t.connectivity(1, 0).row(0).unwrap().len(), 2);
+            assert_eq!(t.connectivity(1, 0).row(0).unwrap()[0], 1);
+            assert_eq!(t.connectivity(1, 0).row(0).unwrap()[1], 2);
+            assert_eq!(t.connectivity(1, 0).row(1).unwrap().len(), 2);
+            assert_eq!(t.connectivity(1, 0).row(1).unwrap()[0], 0);
+            assert_eq!(t.connectivity(1, 0).row(1).unwrap()[1], 2);
+            assert_eq!(t.connectivity(1, 0).row(2).unwrap().len(), 2);
+            assert_eq!(t.connectivity(1, 0).row(2).unwrap()[0], 0);
+            assert_eq!(t.connectivity(1, 0).row(2).unwrap()[1], 1);
+            assert_eq!(t.connectivity(1, 0).row(3).unwrap().len(), 2);
+            assert_eq!(t.connectivity(1, 0).row(3).unwrap()[0], 1);
+            assert_eq!(t.connectivity(1, 0).row(3).unwrap()[1], 3);
+            assert_eq!(t.connectivity(1, 0).row(4).unwrap().len(), 2);
+            assert_eq!(t.connectivity(1, 0).row(4).unwrap()[0], 2);
+            assert_eq!(t.connectivity(1, 0).row(4).unwrap()[1], 3);
+
+            assert_eq!(t.connectivity(0, 1).row(0).unwrap().len(), 2);
+            assert_eq!(t.connectivity(0, 1).row(0).unwrap()[0], 1);
+            assert_eq!(t.connectivity(0, 1).row(0).unwrap()[1], 2);
+            assert_eq!(t.connectivity(0, 1).row(1).unwrap().len(), 3);
+            assert_eq!(t.connectivity(0, 1).row(1).unwrap()[0], 0);
+            assert_eq!(t.connectivity(0, 1).row(1).unwrap()[1], 2);
+            assert_eq!(t.connectivity(0, 1).row(1).unwrap()[2], 3);
+            assert_eq!(t.connectivity(0, 1).row(2).unwrap().len(), 3);
+            assert_eq!(t.connectivity(0, 1).row(2).unwrap()[0], 0);
+            assert_eq!(t.connectivity(0, 1).row(2).unwrap()[1], 1);
+            assert_eq!(t.connectivity(0, 1).row(2).unwrap()[2], 4);
+            assert_eq!(t.connectivity(0, 1).row(3).unwrap().len(), 2);
+            assert_eq!(t.connectivity(0, 1).row(3).unwrap()[0], 3);
+            assert_eq!(t.connectivity(0, 1).row(3).unwrap()[1], 4);
+
+            assert_eq!(t.connectivity(0, 2).row(0).unwrap().len(), 1);
+            assert_eq!(t.connectivity(0, 2).row(0).unwrap()[0], 0);
+            assert_eq!(t.connectivity(0, 2).row(1).unwrap().len(), 2);
+            assert_eq!(t.connectivity(0, 2).row(1).unwrap()[0], 0);
+            assert_eq!(t.connectivity(0, 2).row(1).unwrap()[1], 1);
+            assert_eq!(t.connectivity(0, 2).row(2).unwrap().len(), 2);
+            assert_eq!(t.connectivity(0, 2).row(2).unwrap()[0], 0);
+            assert_eq!(t.connectivity(0, 2).row(2).unwrap()[1], 1);
+            assert_eq!(t.connectivity(0, 2).row(3).unwrap().len(), 1);
+            assert_eq!(t.connectivity(0, 2).row(3).unwrap()[0], 1);
+
+            assert_eq!(t.connectivity(1, 2).row(0).unwrap().len(), 2);
+            assert_eq!(t.connectivity(1, 2).row(0).unwrap()[0], 0);
+            assert_eq!(t.connectivity(1, 2).row(0).unwrap()[1], 1);
+            assert_eq!(t.connectivity(1, 2).row(1).unwrap().len(), 1);
+            assert_eq!(t.connectivity(1, 2).row(1).unwrap()[0], 0);
+            assert_eq!(t.connectivity(1, 2).row(2).unwrap().len(), 1);
+            assert_eq!(t.connectivity(1, 2).row(2).unwrap()[0], 0);
+            assert_eq!(t.connectivity(1, 2).row(3).unwrap().len(), 1);
+            assert_eq!(t.connectivity(1, 2).row(3).unwrap()[0], 1);
+            assert_eq!(t.connectivity(1, 2).row(4).unwrap().len(), 1);
+            assert_eq!(t.connectivity(1, 2).row(4).unwrap()[0], 1);
+        }
+    */
 }
