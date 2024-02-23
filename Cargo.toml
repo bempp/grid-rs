@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 num = "0.4"
-
+bempp-traits = { git = "https://github.com/bempp/bempp-rs.git" }
+bempp-element = { git = "https://github.com/bempp/bempp-rs.git" }
