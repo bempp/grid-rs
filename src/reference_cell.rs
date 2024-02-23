@@ -55,3 +55,55 @@ pub fn vertices<T: Float>(cell: ReferenceCellType) -> Vec<T> {
         ],
     }
 }
+
+/// The edges of the reference cell
+pub fn edges(cell: ReferenceCellType) -> Vec<Vec<usize>> {
+    match cell {
+        ReferenceCellType::Point => vec![],
+        ReferenceCellType::Interval => vec![vec![0, 1]],
+        ReferenceCellType::Triangle => vec![vec![1, 2], vec![0, 2], vec![0, 1]],
+        ReferenceCellType::Quadrilateral => vec![vec![0, 1], vec![0, 2], vec![1, 3], vec![2, 3]],
+        _ => {
+            panic!("Not implemented yet");
+        }
+    }
+}
+
+pub fn entity_types(cell: ReferenceCellType) -> Vec<Vec<ReferenceCellType>> {
+    match cell {
+        ReferenceCellType::Point => vec![vec![ReferenceCellType::Point], vec![], vec![], vec![]],
+        ReferenceCellType::Interval => vec![
+            vec![ReferenceCellType::Point; 2],
+            vec![ReferenceCellType::Interval],
+            vec![],
+            vec![],
+        ],
+        ReferenceCellType::Triangle => vec![
+            vec![ReferenceCellType::Point; 3],
+            vec![ReferenceCellType::Interval; 3],
+            vec![ReferenceCellType::Triangle],
+            vec![],
+        ],
+        ReferenceCellType::Quadrilateral => vec![
+            vec![ReferenceCellType::Point; 4],
+            vec![ReferenceCellType::Interval; 4],
+            vec![ReferenceCellType::Quadrilateral],
+            vec![],
+        ],
+        _ => {
+            panic!("Not implemented yet");
+        }
+    }
+}
+
+pub fn entity_counts(cell: ReferenceCellType) -> Vec<usize> {
+    match cell {
+        ReferenceCellType::Point => vec![1, 0, 0, 0],
+        ReferenceCellType::Interval => vec![2, 1, 0, 0],
+        ReferenceCellType::Triangle => vec![3, 3, 1, 0],
+        ReferenceCellType::Quadrilateral => vec![4, 4, 1, 0],
+        _ => {
+            panic!("Not implemented yet");
+        }
+    }
+}
