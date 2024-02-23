@@ -1,7 +1,7 @@
 //! Implementation of grid topology
 
 use crate::grid::traits::{Ownership, Topology};
-use crate::reference_cell::{dim, entity_counts, entity_types};
+use crate::reference_cell;
 use crate::traits::cell::ReferenceCellType;
 use bempp_element::cell;
 use bempp_tools::arrays::AdjacencyList;
@@ -79,7 +79,7 @@ impl SerialTopology {
             let cells = &connectivity[dim][0];
             for (i, cell_type) in cell_types_new.iter().enumerate() {
                 let ref_cell = get_reference_cell(*cell_type);
-                let ref_entities = (0..entity_counts(*cell_type)[dim0])
+                let ref_entities = (0..reference_cell::entity_counts(*cell_type)[dim0])
                     .map(|x| ref_cell.connectivity(dim0, x, 0).unwrap())
                     .collect::<Vec<Vec<usize>>>();
 
@@ -140,7 +140,7 @@ impl SerialTopology {
 
             let mut sub_cell_types = vec![ReferenceCellType::Point; entities0.num_rows()];
             for (i, cell_type) in cell_types_new.iter().enumerate() {
-                let etypes = &entity_types(*cell_type)[dim];
+                let etypes = &reference_cell::entity_types(*cell_type)[dim];
 
                 let cstart = starts[i];
                 let cend = if i == starts.len() - 1 {
@@ -184,7 +184,7 @@ impl SerialTopology {
 
                 let mut sub_cell_types = vec![ReferenceCellType::Point; entities0.num_rows()];
                 for (i, cell_type) in cell_types_new.iter().enumerate() {
-                    let etypes = &entity_types(*cell_type)[dim0];
+                    let etypes = &reference_cell::entity_types(*cell_type)[dim0];
 
                     let cstart = starts[i];
                     let cend = if i == starts.len() - 1 {
@@ -238,7 +238,7 @@ impl SerialTopology {
 
         let mut all_entity_types = vec![vec![], vec![], vec![], vec![]];
         for c in &cell_types_new {
-            let et = entity_types(*c);
+            let et = reference_cell::entity_types(*c);
             for (dim, t) in et.iter().enumerate() {
                 for e in t {
                     if !all_entity_types[dim].contains(e) {
@@ -320,17 +320,12 @@ impl Topology for SerialTopology {
         etype: ReferenceCellType,
     ) -> Option<&[usize]> {
         // TODO
-        Some(&self.connectivity[self.dim][dim(etype)].data)
+        Some(&self.connectivity[self.dim][reference_cell::dim(etype)].data)
     }
 
     /// Get the indices of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
-    fn connectivity(
-        &self,
-        _etype: ReferenceCellType,
-        _index: usize,
-        _dim: usize,
-    ) -> Option<&[usize]> {
-        None
+    fn connectivity(&self, etype: ReferenceCellType, index: usize, dim: usize) -> Option<&[usize]> {
+        self.connectivity[reference_cell::dim(etype)][dim].row(index)
     }
 
     fn entity_ownership(&self, _dim: usize, _index: usize) -> Ownership {
@@ -366,7 +361,7 @@ mod test {
     }
 
     #[test]
-    fn test_cell_connectivity_points() {
+    fn test_cell_entities_points() {
         let t = example_topology();
         let c = t
             .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Point)
@@ -383,7 +378,7 @@ mod test {
     }
 
     #[test]
-    fn test_cell_connectivity_intervals() {
+    fn test_cell_entities_intervals() {
         let t = example_topology();
         let c = t
             .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Interval)
@@ -399,7 +394,7 @@ mod test {
         assert_eq!(c[5], 0);
     }
     #[test]
-    fn test_cell_connectivity_triangles() {
+    fn test_cell_entities_triangles() {
         let t = example_topology();
         let c = t
             .cell_entities(ReferenceCellType::Triangle, ReferenceCellType::Triangle)
@@ -410,71 +405,57 @@ mod test {
         // cell 1
         assert_eq!(c[1], 1);
     }
-    /*
-        fn test_cell_connectivity() {
-            let t = example_topology();
-            assert_eq!(t.connectivity(0, 0).row(0).unwrap().len(), 1);
-            assert_eq!(t.connectivity(0, 0).row(0).unwrap()[0], 0);
-            assert_eq!(t.connectivity(0, 0).row(1).unwrap().len(), 1);
-            assert_eq!(t.connectivity(0, 0).row(1).unwrap()[0], 1);
-            assert_eq!(t.connectivity(0, 0).row(2).unwrap().len(), 1);
-            assert_eq!(t.connectivity(0, 0).row(2).unwrap()[0], 2);
-            assert_eq!(t.connectivity(0, 0).row(3).unwrap().len(), 1);
-            assert_eq!(t.connectivity(0, 0).row(3).unwrap()[0], 3);
+    #[test]
+    fn test_vertex_connectivity() {
+        let t = example_topology();
 
-            assert_eq!(t.connectivity(1, 0).row(0).unwrap().len(), 2);
-            assert_eq!(t.connectivity(1, 0).row(0).unwrap()[0], 1);
-            assert_eq!(t.connectivity(1, 0).row(0).unwrap()[1], 2);
-            assert_eq!(t.connectivity(1, 0).row(1).unwrap().len(), 2);
-            assert_eq!(t.connectivity(1, 0).row(1).unwrap()[0], 0);
-            assert_eq!(t.connectivity(1, 0).row(1).unwrap()[1], 2);
-            assert_eq!(t.connectivity(1, 0).row(2).unwrap().len(), 2);
-            assert_eq!(t.connectivity(1, 0).row(2).unwrap()[0], 0);
-            assert_eq!(t.connectivity(1, 0).row(2).unwrap()[1], 1);
-            assert_eq!(t.connectivity(1, 0).row(3).unwrap().len(), 2);
-            assert_eq!(t.connectivity(1, 0).row(3).unwrap()[0], 1);
-            assert_eq!(t.connectivity(1, 0).row(3).unwrap()[1], 3);
-            assert_eq!(t.connectivity(1, 0).row(4).unwrap().len(), 2);
-            assert_eq!(t.connectivity(1, 0).row(4).unwrap()[0], 2);
-            assert_eq!(t.connectivity(1, 0).row(4).unwrap()[1], 3);
-
-            assert_eq!(t.connectivity(0, 1).row(0).unwrap().len(), 2);
-            assert_eq!(t.connectivity(0, 1).row(0).unwrap()[0], 1);
-            assert_eq!(t.connectivity(0, 1).row(0).unwrap()[1], 2);
-            assert_eq!(t.connectivity(0, 1).row(1).unwrap().len(), 3);
-            assert_eq!(t.connectivity(0, 1).row(1).unwrap()[0], 0);
-            assert_eq!(t.connectivity(0, 1).row(1).unwrap()[1], 2);
-            assert_eq!(t.connectivity(0, 1).row(1).unwrap()[2], 3);
-            assert_eq!(t.connectivity(0, 1).row(2).unwrap().len(), 3);
-            assert_eq!(t.connectivity(0, 1).row(2).unwrap()[0], 0);
-            assert_eq!(t.connectivity(0, 1).row(2).unwrap()[1], 1);
-            assert_eq!(t.connectivity(0, 1).row(2).unwrap()[2], 4);
-            assert_eq!(t.connectivity(0, 1).row(3).unwrap().len(), 2);
-            assert_eq!(t.connectivity(0, 1).row(3).unwrap()[0], 3);
-            assert_eq!(t.connectivity(0, 1).row(3).unwrap()[1], 4);
-
-            assert_eq!(t.connectivity(0, 2).row(0).unwrap().len(), 1);
-            assert_eq!(t.connectivity(0, 2).row(0).unwrap()[0], 0);
-            assert_eq!(t.connectivity(0, 2).row(1).unwrap().len(), 2);
-            assert_eq!(t.connectivity(0, 2).row(1).unwrap()[0], 0);
-            assert_eq!(t.connectivity(0, 2).row(1).unwrap()[1], 1);
-            assert_eq!(t.connectivity(0, 2).row(2).unwrap().len(), 2);
-            assert_eq!(t.connectivity(0, 2).row(2).unwrap()[0], 0);
-            assert_eq!(t.connectivity(0, 2).row(2).unwrap()[1], 1);
-            assert_eq!(t.connectivity(0, 2).row(3).unwrap().len(), 1);
-            assert_eq!(t.connectivity(0, 2).row(3).unwrap()[0], 1);
-
-            assert_eq!(t.connectivity(1, 2).row(0).unwrap().len(), 2);
-            assert_eq!(t.connectivity(1, 2).row(0).unwrap()[0], 0);
-            assert_eq!(t.connectivity(1, 2).row(0).unwrap()[1], 1);
-            assert_eq!(t.connectivity(1, 2).row(1).unwrap().len(), 1);
-            assert_eq!(t.connectivity(1, 2).row(1).unwrap()[0], 0);
-            assert_eq!(t.connectivity(1, 2).row(2).unwrap().len(), 1);
-            assert_eq!(t.connectivity(1, 2).row(2).unwrap()[0], 0);
-            assert_eq!(t.connectivity(1, 2).row(3).unwrap().len(), 1);
-            assert_eq!(t.connectivity(1, 2).row(3).unwrap()[0], 1);
-            assert_eq!(t.connectivity(1, 2).row(4).unwrap().len(), 1);
-            assert_eq!(t.connectivity(1, 2).row(4).unwrap()[0], 1);
+        for (id, vertices) in [vec![0], vec![1], vec![2], vec![3]].iter().enumerate() {
+            let c = t.connectivity(ReferenceCellType::Point, id, 0).unwrap();
+            assert_eq!(c, vertices);
         }
-    */
+
+        for (id, edges) in [vec![1, 2], vec![0, 2, 3], vec![0, 1, 4], vec![3, 4]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Point, id, 1).unwrap();
+            assert_eq!(c, edges);
+        }
+
+        for (id, faces) in [vec![0], vec![0, 1], vec![0, 1], vec![1]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Point, id, 2).unwrap();
+            assert_eq!(c, faces);
+        }
+    }
+    #[test]
+    fn test_edge_connectivity() {
+        let t = example_topology();
+
+        for (id, vertices) in [vec![1, 2], vec![0, 2], vec![0, 1], vec![1, 3], vec![2, 3]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Interval, id, 0).unwrap();
+            assert_eq!(c, vertices);
+        }
+
+        for (id, edges) in [vec![0], vec![1], vec![2], vec![3], vec![4]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Interval, id, 1).unwrap();
+            assert_eq!(c, edges);
+        }
+
+        for (id, faces) in [vec![0, 1], vec![0], vec![0], vec![1], vec![1]]
+            .iter()
+            .enumerate()
+        {
+            let c = t.connectivity(ReferenceCellType::Interval, id, 2).unwrap();
+            assert_eq!(c, faces);
+        }
+    }
 }
