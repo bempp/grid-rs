@@ -4,8 +4,6 @@ use crate::grid::traits::{Ownership, Topology};
 use crate::reference_cell;
 use crate::traits::cell::ReferenceCellType;
 use bempp_element::cell;
-use bempp_tools::arrays::AdjacencyList;
-use bempp_traits::arrays::AdjacencyListAccess;
 use bempp_traits::cell::ReferenceCell;
 
 /// Topology of a serial grid
@@ -33,7 +31,7 @@ fn get_reference_cell(cell_type: ReferenceCellType) -> Box<dyn ReferenceCell> {
 unsafe impl Sync for SerialTopology {}
 
 impl SerialTopology {
-    pub fn new(cells: &AdjacencyList<usize>, cell_types: &[ReferenceCellType]) -> Self {
+    pub fn new(cells: &[usize], cell_types: &[ReferenceCellType]) -> Self {
         let mut index_map = vec![];
         let mut vertices = vec![];
         let mut starts = vec![];
@@ -57,12 +55,13 @@ impl SerialTopology {
                 starts.push(connectivity[dim][0].len());
                 cell_types_new.push(*c);
                 let n = reference_cell::entity_counts(*c)[0];
-                for (i, cell) in cells.iter_rows().enumerate() {
-                    if cell_types[i] == *c {
+                let mut start = 0;
+                for (i, ct) in cell_types.iter().enumerate() {
+                    if *ct == *c {
+                        let cell = &cells[start..start + n];
                         index_map.push(i);
-                        // Note: this hard codes that the first n points are at the vertices
                         let mut row = vec![];
-                        for v in &cell[..n] {
+                        for v in cell {
                             if !vertices.contains(v) {
                                 vertices.push(*v);
                             }
@@ -70,6 +69,7 @@ impl SerialTopology {
                         }
                         connectivity[dim][0].push(row);
                     }
+                    start += reference_cell::entity_counts(*ct)[0];
                 }
             }
         }
@@ -346,15 +346,12 @@ mod test {
     use crate::grid::topology::*;
 
     fn example_topology() -> SerialTopology {
-        SerialTopology::new(
-            &AdjacencyList::from_data(vec![0, 1, 2, 2, 1, 3], vec![0, 3, 6]),
-            &[ReferenceCellType::Triangle; 2],
-        )
+        SerialTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2])
     }
 
     /*fn example_topology_mixed() -> SerialTopology {
         SerialTopology::new(
-            &AdjacencyList::from_data(vec![0, 1, 3, 4, 1, 2, 4], vec![0, 4, 7]),
+            &[0, 1, 3, 4, 1, 2, 4],
             &[ReferenceCellType::Quadrilateral, ReferenceCellType::Triangle],
         )
     }*/
