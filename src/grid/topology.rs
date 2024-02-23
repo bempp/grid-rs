@@ -6,11 +6,14 @@ use crate::traits::cell::ReferenceCellType;
 use bempp_element::cell;
 use bempp_traits::cell::ReferenceCell;
 
+use std::collections::HashMap;
+
 /// Topology of a serial grid
 pub struct SerialTopology {
     dim: usize,
     connectivity: Vec<Vec<Vec<Vec<usize>>>>,
     cell_connectivity: Vec<Vec<usize>>, // TODO: get rid of this input
+    connectivity_neww: Vec<Vec<HashMap<ReferenceCellType, Vec<usize>>>>,
     index_map: Vec<usize>,
     starts: Vec<usize>,
     cell_types: Vec<ReferenceCellType>,
@@ -46,12 +49,21 @@ impl SerialTopology {
             }
         }
 
+        let mut connectivity_neww = vec![];
+        for i in 0..dim + 1 {
+            connectivity_neww.push(vec![]);
+            for _j in 0..dim + 1 {
+                connectivity_neww[i].push(HashMap::new());
+            }
+        }
+
         // dim0 = dim, dim1 = 0
         for c in cell_types {
             if dim != reference_cell::dim(*c) {
                 panic!("Grids with cells of mixed topological dimension not supported.");
             }
             if !cell_types_new.contains(c) {
+                let mut cty = vec![];
                 starts.push(connectivity[dim][0].len());
                 cell_types_new.push(*c);
                 let n = reference_cell::entity_counts(*c)[0];
@@ -67,10 +79,12 @@ impl SerialTopology {
                             }
                             row.push(vertices.iter().position(|&r| r == *v).unwrap());
                         }
+                        cty.extend_from_slice(&row);
                         connectivity[dim][0].push(row);
                     }
                     start += reference_cell::entity_counts(*ct)[0];
                 }
+                connectivity_neww[dim][0].insert(*c, cty);
             }
         }
 
@@ -261,6 +275,7 @@ impl SerialTopology {
             dim,
             connectivity,
             cell_connectivity,
+            connectivity_neww,
             index_map,
             starts,
             cell_types: cell_types_new,
