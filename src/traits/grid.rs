@@ -77,9 +77,6 @@ pub trait Geometry {
     /// The number of cells
     fn cell_count(&self) -> usize;
 
-    // In progress: functions to compute geometry information
-    // Need these to be able to compute something for every cell in turn without needing to re-tabulate the geometry element every time
-
     /// Get the element used to represent a cell
     fn cell_element(&self, index: usize) -> Option<&Self::Element>;
 
@@ -92,6 +89,31 @@ pub trait Geometry {
 
     // ... or would it be better to replace the above 3 functions with an Iter?
     fn elements_and_cells(&self) -> std::slice::Iter<'_, (&Self::Element, &[usize])>;
+
+    // In progress: functions to compute geometry information
+    // Need these to be able to compute something for every cell in turn without needing to re-tabulate the geometry element every time
+    // Question: what's better: passing in 1D slices or rlst matrices? For now I've used 1D, but current bempp-rs uses rlst
+    // I'm not a big fan of the user having to sort out these tables
+    
+    /// Compute the coordinates of a set of points on a physical cell
+    ///
+    /// `table` should be the geometry element tabulated at the points on the reference cell, ie:
+    ///    table = rlst_dynamic_array4!(T, self.cell_element(cell).tabulate_array_shape(0, npts));
+    ///    self.cell_element(cell).tabulate(points, 0, table.data_mut());
+    /// For this function, `table` may include 0 derivatives.
+    // We want to run this function on multiple cells with the same points, so don't want to retabuilate inside the function every time?
+    fn compute_points(&self, table: &[T], cell: usize, physical_points: &mut [T]);
+
+    /// Compute the normals and jacobian determinants at a set of points on a physical cell
+    ///
+    /// `table` should be the geometry element tabulated at the points on the reference cell, ie:
+    ///    table = rlst_dynamic_array4!(T, self.cell_element(cell).tabulate_array_shape(0, npts));
+    ///    self.cell_element(cell).tabulate(points, 0, table.data_mut());
+    /// For this function, `table` must include at least 1 derivative.
+    fn compute_normals_and_jacobian_determinants(
+        &self, table: &[T]
+
+
 }
 
 /// A grid

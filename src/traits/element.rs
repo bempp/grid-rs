@@ -64,9 +64,9 @@ pub trait FiniteElement {
     /// Tabulate the values of the basis functions and their derivatives at a set of points
     fn tabulate<PointType: Float>(
         &self,
-        points: &[PointType],
+        points: &[PointType], // This might be better at a rlst_dyanamic_array2
         nderivs: usize,
-        data: &mut [Self::T],
+        data: &mut [Self::T], // This might be better at a rlst_dyanamic_array4
     );
 
     /// The DOFs that are associated with a subentity of the reference cell
