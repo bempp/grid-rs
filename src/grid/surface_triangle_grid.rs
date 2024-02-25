@@ -1,6 +1,6 @@
 //! Surface triangle grid
 
-use std::{collections::HashMap, marker::PhantomData, ops::Add};
+use std::{collections::HashMap, iter::Copied, marker::PhantomData, ops::Add};
 
 use num::{traits::Float, One};
 use rlst::{rlst_dynamic_array2, rlst_static_array, Array};
@@ -12,7 +12,7 @@ use rlst_dense::{
 };
 use rlst_proc_macro::rlst_static_type;
 
-use crate::traits::Grid;
+use crate::traits::{CellType, GridType, TopologyType, VertexType};
 
 pub struct TriangleVertex<'a, T: Float + Scalar> {
     id: usize,
@@ -20,83 +20,68 @@ pub struct TriangleVertex<'a, T: Float + Scalar> {
     data: &'a [T; 3],
 }
 
-pub struct TriangleCell<'a> {
+impl<'a, T: Float + Scalar> VertexType for TriangleVertex<'a, T> {
+    type T = T;
+
+    fn coords(&self, data: &mut [Self::T]) {
+        for (out_data, &in_data) in data.iter_mut().zip(self.data) {
+            *out_data = in_data;
+        }
+    }
+
+    fn index(&self) -> usize {
+        self.index
+    }
+
+    fn id(&self) -> usize {
+        self.id
+    }
+}
+
+pub struct TriangleCell<'a, T: Float + Scalar> {
     id: usize,
     index: usize,
     data: &'a [usize; 3],
+    _marker: PhantomData<T>,
 }
 
-pub struct VertexIterator<'a, T: Float + Scalar> {
-    grid: &'a TriangleSurfaceGrid<T>,
-    current: usize,
-    finished: bool,
+impl<'a, T: Float + Scalar> CellType for TriangleCell<'a, T> {
+    type Topology<'top> = TriangleTopology<'top, T> where Self: 'top;
+
+    fn id(&self) -> usize {
+        self.id
+    }
+
+    fn index(&self) -> usize {
+        self.index
+    }
+
+    fn topology(&self) -> Self::Topology<'_> {
+        TriangleTopology::new(self)
+    }
 }
 
-pub struct CellIterator<'a, T: Float + Scalar> {
-    grid: &'a TriangleSurfaceGrid<T>,
-    current: usize,
-    finished: bool,
+pub struct TriangleTopology<'a, T: Float + Scalar> {
+    cell: &'a TriangleCell<'a, T>,
+    _marker: PhantomData<T>,
 }
 
-impl<'a, T: Float + Scalar> VertexIterator<'a, T> {
-    pub fn new(grid: &'a TriangleSurfaceGrid<T>) -> Self {
+impl<'a, T: Float + Scalar> TriangleTopology<'a, T> {
+    pub fn new(cell: &'a TriangleCell<'a, T>) -> Self {
         Self {
-            grid,
-            current: 0,
-            finished: false,
+            cell,
+            _marker: PhantomData,
         }
     }
 }
 
-impl<'a, T: Float + Scalar> CellIterator<'a, T> {
-    pub fn new(grid: &'a TriangleSurfaceGrid<T>) -> Self {
-        Self {
-            grid,
-            current: 0,
-            finished: false,
-        }
-    }
-}
+impl<'a, T: Float + Scalar> TopologyType for TriangleTopology<'a, T> {
+    type Grid = TriangleSurfaceGrid<T>;
 
-impl<'a, T: Float + Scalar> std::iter::Iterator for VertexIterator<'a, T> {
-    type Item = TriangleVertex<'a, T>;
+    type VertexIndexIter<'iter> = Copied<std::slice::Iter<'iter, usize>> where Self: 'iter;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.finished || self.grid.vertices.is_empty() {
-            None
-        } else {
-            let out = Some(TriangleVertex {
-                id: self.grid.ids_from_vertex_indices[self.current],
-                index: self.current,
-                data: &self.grid.vertices[self.current],
-            });
-
-            self.current += 1;
-            self.finished = self.current == self.grid.vertices.len();
-
-            out
-        }
-    }
-}
-
-impl<'a, T: Float + Scalar> std::iter::Iterator for CellIterator<'a, T> {
-    type Item = TriangleCell<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.finished || self.grid.vertices.is_empty() {
-            None
-        } else {
-            let out = Some(TriangleCell {
-                id: self.grid.ids_from_cell_indices[self.current],
-                index: self.current,
-                data: &self.grid.cells[self.current],
-            });
-
-            self.current += 1;
-            self.finished = self.current == self.grid.cells.len();
-
-            out
-        }
+    fn vertex_indices(&self) -> Self::VertexIndexIter<'_> {
+        self.cell.data.iter().copied()
     }
 }
 
@@ -186,36 +171,58 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
     }
 }
 
-impl<T: Float + Scalar> Grid for TriangleSurfaceGrid<T> {
+impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
     type T = T;
 
     type Vertex<'a> = TriangleVertex<'a, T> where Self: 'a;
-    type Cell<'a> = TriangleCell<'a> where Self: 'a;
+    type Cell<'a> = TriangleCell<'a, T> where Self: 'a;
 
     type Edge = [usize; 2];
 
     type Face = ();
 
-    type VertexIterator<'v> = VertexIterator<'v, T>
-    where
-        Self: 'v;
-
-    fn iter_vertices(&self) -> Self::VertexIterator<'_> {
-        VertexIterator::new(self)
+    fn number_of_vertices(&self) -> usize {
+        self.vertices.len()
+    }
+    fn number_of_cells(&self) -> usize {
+        self.cells.len()
     }
 
-    type CellIterator<'v> = CellIterator<'v, T>
-    where
-        Self: 'v;
+    fn vertex_index_from_id(&self, id: usize) -> usize {
+        self.vertex_ids[&id]
+    }
+    fn vertex_id_from_index(&self, index: usize) -> usize {
+        self.ids_from_vertex_indices[index]
+    }
 
-    fn iter_cells(&self) -> Self::CellIterator<'_> {
-        CellIterator::new(self)
+    fn cell_index_from_id(&self, id: usize) -> usize {
+        self.cell_ids[&id]
+    }
+    fn cell_id_from_index(&self, index: usize) -> usize {
+        self.ids_from_cell_indices[index]
+    }
+
+    fn vertex_from_index(&self, index: usize) -> Self::Vertex<'_> {
+        TriangleVertex {
+            id: self.vertex_id_from_index(index),
+            index,
+            data: &self.vertices[index],
+        }
+    }
+
+    fn cell_from_index(&self, index: usize) -> Self::Cell<'_> {
+        TriangleCell {
+            id: self.cell_id_from_index(index),
+            index,
+            data: &self.cells[index],
+            _marker: PhantomData,
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::traits::Grid;
+    use crate::traits::{CellType, GridType, TopologyType};
 
     use super::TriangleSurfaceGrid;
 
@@ -231,8 +238,19 @@ mod test {
         grid.add_cell(0, [0, 1, 2]);
         grid.add_cell(0, [1, 3, 2]);
 
-        for vertex in grid.iter_cells() {
+        for vertex in grid.iter_all_vertices() {
             println!("{:#?}", vertex.data)
+        }
+
+        for cell in grid.iter_all_cells() {
+            for (local_index, vertex_index) in cell.topology().vertex_indices().enumerate() {
+                println!(
+                    "Cell: {}, Vertex: {}, {}",
+                    cell.index(),
+                    local_index,
+                    vertex_index
+                )
+            }
         }
     }
 }
