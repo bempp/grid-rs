@@ -8,5 +8,11 @@ pub trait TopologyType {
     where
         Self: 'a;
 
+    type EdgeIndexIter<'a>: std::iter::Iterator<Item = usize>
+    where
+        Self: 'a;
+
     fn vertex_indices(&self) -> Self::VertexIndexIter<'_>;
+
+    fn edge_indices(&self) -> Self::EdgeIndexIter<'_>;
 }

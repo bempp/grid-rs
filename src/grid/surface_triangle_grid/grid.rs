@@ -16,6 +16,8 @@ pub struct TriangleSurfaceGrid<T: Float + Scalar> {
     ids_from_cell_indices: Vec<usize>,
     vertex_ids: HashMap<usize, usize>,
     cell_ids: HashMap<usize, usize>,
+    edge_connectivity: HashMap<(usize, usize), (usize, Vec<usize>)>,
+    pub(crate) cell_to_edges: Vec<[usize; 3]>,
 }
 
 impl<T: Float + Scalar> Default for TriangleSurfaceGrid<T> {
@@ -33,6 +35,8 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
             ids_from_cell_indices: Vec::new(),
             vertex_ids: HashMap::new(),
             cell_ids: HashMap::new(),
+            edge_connectivity: HashMap::new(),
+            cell_to_edges: Vec::new(),
         }
     }
 
@@ -44,6 +48,8 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
             ids_from_cell_indices: Vec::with_capacity(ncells),
             vertex_ids: HashMap::new(),
             cell_ids: HashMap::new(),
+            edge_connectivity: HashMap::new(),
+            cell_to_edges: Vec::new(),
         }
     }
 
@@ -63,6 +69,39 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
         ]);
         self.ids_from_cell_indices.push(id);
         self.cell_ids.insert(id, index);
+    }
+
+    pub fn finalize(&mut self) {
+        self.create_edges();
+    }
+
+    fn create_edges(&mut self) {
+        let mut nedges: usize = 0;
+        self.cell_to_edges
+            .resize_with(self.cells.len(), Default::default);
+        let edge_local: [(usize, usize); 3] = [(0, 1), (1, 2), (2, 0)];
+        for (cell_index, cell_vertices) in self.cells.iter().enumerate() {
+            for (local_index, &(first, second)) in edge_local.iter().enumerate() {
+                let mut first = cell_vertices[first];
+                let mut second = cell_vertices[second];
+                if first > second {
+                    std::mem::swap(&mut first, &mut second);
+                }
+                if let Some((edge_index, adjacent_cells)) =
+                    self.edge_connectivity.get_mut(&(first, second))
+                {
+                    adjacent_cells.push(cell_index);
+                    self.cell_to_edges[cell_index][local_index] = *edge_index;
+                } else {
+                    let mut adjacent_cells = Vec::<usize>::with_capacity(2);
+                    adjacent_cells.push(cell_index);
+                    self.cell_to_edges[cell_index][local_index] = nedges;
+                    self.edge_connectivity
+                        .insert((first, second), (nedges, adjacent_cells));
+                    nedges += 1;
+                }
+            }
+        }
     }
 }
 
@@ -128,6 +167,8 @@ mod test {
         grid.add_cell(0, [0, 1, 2]);
         grid.add_cell(0, [1, 3, 2]);
 
+        grid.finalize();
+
         let mut coords = [0.0; 3];
         for vertex in grid.iter_all_vertices() {
             vertex.coords(coords.as_mut_slice());
@@ -135,12 +176,19 @@ mod test {
         }
 
         for cell in grid.iter_all_cells() {
-            for (local_index, vertex_index) in cell.topology().vertex_indices().enumerate() {
+            for (local_index, (vertex_index, edge_index)) in cell
+                .topology()
+                .vertex_indices()
+                .zip(cell.topology().edge_indices())
+                .enumerate()
+            {
                 println!(
-                    "Cell: {}, Vertex: {}, {}",
+                    "Cell: {}, Vertex: {}, {}, Edge: {}, {}",
                     cell.index(),
                     local_index,
-                    vertex_index
+                    vertex_index,
+                    local_index,
+                    edge_index,
                 )
             }
         }

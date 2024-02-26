@@ -29,8 +29,15 @@ impl<'a, T: Float + Scalar> TopologyType for TriangleTopology<'a, T> {
     type Grid = TriangleSurfaceGrid<T>;
 
     type VertexIndexIter<'iter> = Copied<std::slice::Iter<'iter, usize>> where Self: 'iter;
+    type EdgeIndexIter<'iter> = Copied<std::slice::Iter<'iter, usize>> where Self: 'iter;
 
     fn vertex_indices(&self) -> Self::VertexIndexIter<'_> {
         self.cell.grid().cells[self.cell.index()].iter().copied()
+    }
+
+    fn edge_indices(&self) -> Self::EdgeIndexIter<'_> {
+        self.cell.grid().cell_to_edges[self.cell.index()]
+            .iter()
+            .copied()
     }
 }
