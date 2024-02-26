@@ -310,19 +310,12 @@ impl SerialTopology {
                     let mut start = 0;
                     for etype1 in &entity_types[dim1] {
                         let entities1 = &connectivity_neww[etype1][0];
-                        let cell_to_entities0 = &connectivity[dim][dim0]; // TODO
-
                         let mut sub_cell_types = vec![ReferenceCellType::Point; entities0.len()];
-                        for (i, cell_type) in cell_types_new.iter().enumerate() {
+                        for cell_type in &entity_types[dim] {
+                            let cell_to_entities0 = &connectivity_neww[cell_type][dim0];
                             let etypes = &reference_cell::entity_types(*cell_type)[dim0];
 
-                            let cstart = starts[i];
-                            let cend = if i == starts.len() - 1 {
-                                connectivity[2][0].len()
-                            } else {
-                                starts[i + 1]
-                            };
-                            for ces in cell_to_entities0.iter().take(cend).skip(cstart) {
+                            for ces in cell_to_entities0 {
                                 for (e, t) in ces.iter().zip(etypes) {
                                     sub_cell_types[*e] = *t;
                                 }
@@ -452,25 +445,31 @@ impl Topology for SerialTopology {
         &self.index_map
     }
     fn entity_count(&self, dim: usize) -> usize {
-        self.connectivity[dim][0].len()
+        let mut count = 0;
+        for etype in &self.entity_types[dim] {
+            count += self.connectivity_neww[etype][0].len();
+        }
+        count
     }
     fn cell(&self, index: usize) -> Option<&[usize]> {
-        if index < self.entity_count(self.dim) {
-            Some(&self.connectivity[self.dim][0][index])
-        } else {
-            None
+        let mut start = 0;
+        for etype in &self.entity_types[self.dim] {
+            let count = self.connectivity_neww[etype][0].len();
+            if index < start + count {
+                return Some(&self.connectivity_neww[etype][0][index - start])
+            }
+            start += count;
         }
+        None
     }
     fn cell_type(&self, index: usize) -> Option<ReferenceCellType> {
-        for (i, start) in self.starts.iter().enumerate() {
-            let end = if i == self.starts.len() - 1 {
-                self.connectivity[2][0].len()
-            } else {
-                self.starts[i + 1]
-            };
-            if *start <= index && index < end {
-                return Some(self.cell_types[i]);
+        let mut start = 0;
+        for etype in &self.entity_types[self.dim] {
+            let count = self.connectivity_neww[etype][0].len();
+            if index < start + count {
+                return Some(*etype)
             }
+            start += count;
         }
         None
     }
@@ -491,7 +490,7 @@ impl Topology for SerialTopology {
 
     /// Get the indices of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
     fn connectivity(&self, etype: ReferenceCellType, index: usize, dim: usize) -> Option<&[usize]> {
-        Some(&self.connectivity[reference_cell::dim(etype)][dim][index])
+        Some(&self.connectivity_neww[&etype][dim][index])
     }
 
     fn entity_ownership(&self, _dim: usize, _index: usize) -> Ownership {
