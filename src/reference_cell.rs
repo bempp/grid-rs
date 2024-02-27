@@ -69,6 +69,7 @@ pub fn edges(cell: ReferenceCellType) -> Vec<Vec<usize>> {
     }
 }
 
+/// The types of the subentities of the reference cell
 pub fn entity_types(cell: ReferenceCellType) -> Vec<Vec<ReferenceCellType>> {
     match cell {
         ReferenceCellType::Point => vec![vec![ReferenceCellType::Point], vec![], vec![], vec![]],
@@ -96,12 +97,57 @@ pub fn entity_types(cell: ReferenceCellType) -> Vec<Vec<ReferenceCellType>> {
     }
 }
 
+/// The number of subentities of each dimension
 pub fn entity_counts(cell: ReferenceCellType) -> Vec<usize> {
     match cell {
         ReferenceCellType::Point => vec![1, 0, 0, 0],
         ReferenceCellType::Interval => vec![2, 1, 0, 0],
         ReferenceCellType::Triangle => vec![3, 3, 1, 0],
         ReferenceCellType::Quadrilateral => vec![4, 4, 1, 0],
+        _ => {
+            panic!("Not implemented yet");
+        }
+    }
+}
+
+/// The connectivity of the reference cell
+///
+/// The indices of the result are [i][j][k][l]
+pub fn connectivity(cell: ReferenceCellType) -> Vec<Vec<Vec<Vec<usize>>>> {
+    match cell {
+        ReferenceCellType::Point => vec![vec![vec![vec![0]]]],
+        ReferenceCellType::Interval => vec![
+            vec![vec![vec![0], vec![0]], vec![vec![1], vec![0]]],
+            vec![vec![vec![0, 1], vec![0]]],
+        ],
+        ReferenceCellType::Triangle => vec![
+            vec![
+                vec![vec![0], vec![1, 2], vec![0]],
+                vec![vec![1], vec![0, 2], vec![0]],
+                vec![vec![2], vec![0, 1], vec![0]],
+            ],
+            vec![
+                vec![vec![1, 2], vec![0], vec![0]],
+                vec![vec![0, 2], vec![1], vec![0]],
+                vec![vec![0, 1], vec![2], vec![0]],
+            ],
+            vec![vec![vec![0, 1, 2], vec![0, 1, 2], vec![0]]],
+        ],
+        ReferenceCellType::Quadrilateral => vec![
+            vec![
+                vec![vec![0], vec![0, 1], vec![0]],
+                vec![vec![1], vec![0, 2], vec![0]],
+                vec![vec![2], vec![1, 3], vec![0]],
+                vec![vec![3], vec![2, 3], vec![0]],
+            ],
+            vec![
+                vec![vec![0, 1], vec![0], vec![0]],
+                vec![vec![0, 2], vec![1], vec![0]],
+                vec![vec![1, 3], vec![2], vec![0]],
+                vec![vec![2, 3], vec![3], vec![0]],
+            ],
+            vec![vec![vec![0, 1, 2, 3], vec![0, 1, 2, 3], vec![0]]],
+        ],
         _ => {
             panic!("Not implemented yet");
         }

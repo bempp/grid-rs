@@ -3,8 +3,6 @@
 use crate::grid::traits::{Ownership, Topology};
 use crate::reference_cell;
 use crate::traits::cell::ReferenceCellType;
-use bempp_element::cell;
-use bempp_traits::cell::ReferenceCell;
 
 use std::collections::HashMap;
 
@@ -15,17 +13,6 @@ pub struct SerialTopology {
     cell_connectivity: HashMap<ReferenceCellType, HashMap<ReferenceCellType, Vec<usize>>>,
     index_map: Vec<usize>,
     entity_types: Vec<Vec<ReferenceCellType>>,
-}
-
-fn get_reference_cell(cell_type: ReferenceCellType) -> Box<dyn ReferenceCell> {
-    match cell_type {
-        ReferenceCellType::Interval => Box::new(cell::Interval),
-        ReferenceCellType::Triangle => Box::new(cell::Triangle),
-        ReferenceCellType::Quadrilateral => Box::new(cell::Quadrilateral),
-        _ => {
-            panic!("Unsupported cell type (for now)");
-        }
-    }
 }
 
 unsafe impl Sync for SerialTopology {}
@@ -80,9 +67,9 @@ impl SerialTopology {
             for etype in etypes0 {
                 let mut cty: Vec<Vec<usize>> = vec![];
                 for cell_type in &entity_types[dim] {
-                    let ref_cell = get_reference_cell(*cell_type);
+                    let ref_conn = reference_cell::connectivity(*cell_type);
                     let ref_entities = (0..reference_cell::entity_counts(*cell_type)[dim0])
-                        .map(|x| ref_cell.connectivity(dim0, x, 0).unwrap())
+                        .map(|x| ref_conn[dim0][x][0].clone())
                         .collect::<Vec<Vec<usize>>>();
 
                     let cells = &connectivity[&cell_type][0];
@@ -147,12 +134,9 @@ impl SerialTopology {
                     let entities1 = &connectivity[etype][0];
 
                     for entity0 in entities0 {
-                        let entity = get_reference_cell(*cell_type);
                         let mut row = vec![];
-                        for i in 0..entity.entity_count(dim1) {
-                            let vertices = entity
-                                .connectivity(dim1, i, 0)
-                                .unwrap()
+                        for i in 0..reference_cell::entity_counts(*cell_type)[dim1] {
+                            let vertices = reference_cell::connectivity(*cell_type)[dim1][i][0]
                                 .iter()
                                 .map(|x| entity0[*x])
                                 .collect::<Vec<usize>>();
@@ -181,12 +165,9 @@ impl SerialTopology {
                     for etype1 in etypes1 {
                         let entities1 = &connectivity[etype1][0];
                         for entity0 in entities0 {
-                            let entity = get_reference_cell(*etype0);
                             let mut row = vec![];
-                            for i in 0..entity.entity_count(dim1) {
-                                let vertices = entity
-                                    .connectivity(dim1, i, 0)
-                                    .unwrap()
+                            for i in 0..reference_cell::entity_counts(*etype0)[dim1] {
+                                let vertices = reference_cell::connectivity(*etype0)[dim1][i][0]
                                     .iter()
                                     .map(|x| entity0[*x])
                                     .collect::<Vec<usize>>();
