@@ -25,6 +25,8 @@ impl SerialTopology {
 
         let mut entity_types = vec![vec![]; 4];
         let mut connectivity = HashMap::new();
+        let mut cell_connectivity = HashMap::new();
+
         for c in cell_types {
             if dim != reference_cell::dim(*c) {
                 panic!("Grids with cells of mixed topological dimension not supported.");
@@ -42,6 +44,7 @@ impl SerialTopology {
         // dim0 = dim, dim1 = 0
         for c in &entity_types[dim] {
             let mut cty = vec![];
+            let mut cty_neww = vec![];
             let n = reference_cell::entity_counts(*c)[0];
             let mut start = 0;
             for (i, ct) in cell_types.iter().enumerate() {
@@ -55,11 +58,20 @@ impl SerialTopology {
                         }
                         row.push(vertices.iter().position(|&r| r == *v).unwrap());
                     }
+                    cty_neww.extend_from_slice(&row);
                     cty.push(row);
                 }
                 start += reference_cell::entity_counts(*ct)[0];
             }
             connectivity.get_mut(c).unwrap()[0] = cty;
+            let mut m = HashMap::new();
+            m.insert(ReferenceCellType::Point, cty_neww);
+            for etypes in entity_types.iter().skip(1) {
+                for etype in etypes {
+                    m.insert(*etype, vec![]);
+                }
+            }
+            cell_connectivity.insert(*c, m);
         }
 
         // dim1 == 0
@@ -123,6 +135,19 @@ impl SerialTopology {
                 connectivity.get_mut(etype).unwrap()[dim0] = cty;
             }
         }
+        // dim0 == dim1 == dim
+        let mut start = 0;
+        for etype in &entity_types[dim] {
+            let mut cty = vec![];
+            for i in 0..connectivity[etype][0].len() {
+                cty.push(start + i);
+            }
+            start += connectivity[etype][0].len();
+            cell_connectivity
+                .get_mut(etype)
+                .unwrap()
+                .insert(*etype, cty);
+        }
 
         // dim0 == dim
         for cell_type in &entity_types[dim] {
@@ -131,6 +156,7 @@ impl SerialTopology {
                 let entities0 = &connectivity[cell_type][0];
                 let mut start = 0;
                 for etype in etypes0 {
+                    let mut cty_neww = vec![];
                     let entities1 = &connectivity[etype][0];
 
                     for entity0 in entities0 {
@@ -147,9 +173,14 @@ impl SerialTopology {
                                 }
                             }
                         }
+                        cty_neww.extend_from_slice(&row);
                         cty.push(row);
                     }
                     start += entities1.len();
+                    cell_connectivity
+                        .get_mut(cell_type)
+                        .unwrap()
+                        .insert(*etype, cty_neww);
                 }
                 connectivity.get_mut(cell_type).unwrap()[dim1] = cty;
             }
@@ -204,30 +235,6 @@ impl SerialTopology {
                     connectivity.get_mut(etype0).unwrap()[dim1] = data;
                 }
             }
-        }
-
-        let mut cell_connectivity = HashMap::new();
-        for cell_type in &entity_types[dim] {
-            let mut all = HashMap::new();
-            for (edim, etypes) in entity_types.iter().enumerate().take(dim + 1) {
-                for etype in etypes {
-                    all.insert(*etype, vec![]);
-                }
-
-                for c in &connectivity[cell_type][edim] {
-                    for i in c {
-                        let mut start = 0;
-                        for etype in &entity_types[edim] {
-                            let count = connectivity[etype][0].len();
-                            if *i < start + count {
-                                all.get_mut(etype).unwrap().push(*i)
-                            }
-                            start += count;
-                        }
-                    }
-                }
-            }
-            cell_connectivity.insert(*cell_type, all);
         }
 
         Self {
@@ -294,7 +301,6 @@ impl Topology for SerialTopology {
         &self.entity_types[dim]
     }
 
-    /// Get the indices of entities of type `etype` that are connected to each cell of type `cell_type`
     fn cell_entities(
         &self,
         cell_type: ReferenceCellType,
@@ -309,7 +315,6 @@ impl Topology for SerialTopology {
         }
     }
 
-    /// Get the indices of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
     fn connectivity(&self, etype: ReferenceCellType, index: usize, dim: usize) -> Option<&[usize]> {
         if self.connectivity.contains_key(&etype)
             && dim < self.connectivity[&etype].len()
@@ -517,7 +522,7 @@ mod test {
         let c = t
             .cell_entities(
                 ReferenceCellType::Quadrilateral,
-                ReferenceCellType::Triangle,
+                ReferenceCellType::Quadrilateral,
             )
             .unwrap();
         assert_eq!(c.len(), 1);
@@ -606,12 +611,10 @@ mod test {
             for dim in 0..t.dim() + 1 {
                 for entity_type in t.entity_types(dim) {
                     let ce = t.cell_entities(*cell_type, *entity_type).unwrap();
-                    if !ce.is_empty() {
-                        let n = reference_cell::entity_counts(*cell_type)[dim];
-                        for i in 0..t.entity_count(*cell_type) {
-                            let con = t.connectivity(*cell_type, i, dim).unwrap();
-                            assert_eq!(con, &ce[n * i..n * (i + 1)]);
-                        }
+                    let n = reference_cell::entity_counts(*cell_type)[dim];
+                    for i in 0..ce.len() / n {
+                        let con = t.connectivity(*cell_type, i, dim).unwrap();
+                        assert_eq!(con, &ce[n * i..n * (i + 1)]);
                     }
                 }
             }
@@ -625,7 +628,7 @@ mod test {
     }
 
     #[test]
-    fn test_cell_entities_vs_connectivity_mixes() {
+    fn test_cell_entities_vs_connectivity_mixed() {
         let t = example_topology_mixed();
         cell_entities_vs_connectivity(&t);
     }
