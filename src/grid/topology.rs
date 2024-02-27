@@ -10,7 +10,7 @@ use std::collections::HashMap;
 type Connectivity = Vec<Vec<(ReferenceCellType, usize)>>;
 pub struct SerialTopology {
     dim: usize,
-    cells: Vec<Vec<usize>>,
+    cells: Vec<(ReferenceCellType, Vec<usize>)>,
     connectivity: HashMap<ReferenceCellType, Vec<Connectivity>>,
     cell_connectivity: HashMap<ReferenceCellType, Connectivity>,
     index_map: Vec<usize>,
@@ -65,7 +65,7 @@ impl SerialTopology {
                         ));
                     }
                     cty_neww[0].extend_from_slice(&row);
-                    cells.push(row.iter().map(|x| x.1).collect());
+                    cells.push((*c, row.iter().map(|x| x.1).collect()));
                     cty.push(row);
                 }
                 start += reference_cell::entity_counts(*ct)[0];
@@ -259,21 +259,17 @@ impl Topology for SerialTopology {
     }
     fn cell(&self, index: usize) -> Option<&[usize]> {
         if index < self.cells.len() {
-            Some(&self.cells[index])
+            Some(&self.cells[index].1)
         } else {
             None
         }
     }
     fn cell_type(&self, index: usize) -> Option<ReferenceCellType> {
-        let mut start = 0;
-        for etype in &self.entity_types[self.dim] {
-            let count = self.connectivity[etype][0].len();
-            if index < start + count {
-                return Some(*etype);
-            }
-            start += count;
+        if index < self.cells.len() {
+            Some(self.cells[index].0)
+        } else {
+            None
         }
-        None
     }
 
     fn entity_types(&self, dim: usize) -> &[ReferenceCellType] {
