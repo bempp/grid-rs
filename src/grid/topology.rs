@@ -6,8 +6,26 @@ use crate::traits::cell::ReferenceCellType;
 
 use std::collections::HashMap;
 
-/// Topology of a serial grid
 type Connectivity = Vec<Vec<(ReferenceCellType, usize)>>;
+
+fn all_equal<T: Eq>(a: &[T], b: &[T]) -> bool {
+    if a.len() != b.len() {
+        false
+    } else {
+        all_in(a, b)
+    }
+}
+
+fn all_in<T: Eq>(a: &[T], b: &[T]) -> bool {
+    for i in a {
+        if !b.contains(i) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Topology of a serial grid
 pub struct SerialTopology {
     dim: usize,
     cells: Vec<(ReferenceCellType, Vec<usize>)>,
@@ -228,23 +246,6 @@ impl SerialTopology {
             entity_types,
         }
     }
-}
-
-fn all_equal<T: Eq>(a: &[T], b: &[T]) -> bool {
-    if a.len() != b.len() {
-        false
-    } else {
-        all_in(a, b)
-    }
-}
-
-fn all_in<T: Eq>(a: &[T], b: &[T]) -> bool {
-    for i in a {
-        if !b.contains(i) {
-            return false;
-        }
-    }
-    true
 }
 
 impl Topology for SerialTopology {
