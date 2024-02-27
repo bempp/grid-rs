@@ -11,13 +11,9 @@ use std::collections::HashMap;
 /// Topology of a serial grid
 pub struct SerialTopology {
     dim: usize,
-    connectivity: Vec<Vec<Vec<Vec<usize>>>>,
-    cell_connectivity: Vec<Vec<usize>>, // TODO: get rid of this input
     connectivity_neww: HashMap<ReferenceCellType, Vec<Vec<Vec<usize>>>>,
     cell_connectivity_neww: HashMap<ReferenceCellType, HashMap<ReferenceCellType, Vec<usize>>>,
     index_map: Vec<usize>,
-    starts: Vec<usize>,
-    cell_types: Vec<ReferenceCellType>,
     entity_types: Vec<Vec<ReferenceCellType>>,
 }
 
@@ -220,7 +216,7 @@ impl SerialTopology {
                 for etype in &entity_types[dim1] {
                     let entities1 = &connectivity_neww[etype][0];
 
-                    for (ei, entity0) in entities0.iter().enumerate() {
+                    for entity0 in entities0 {
                         let entity = get_reference_cell(*cell_type);
                         let mut row = vec![];
                         for i in 0..entity.entity_count(dim1) {
@@ -292,7 +288,6 @@ impl SerialTopology {
             }
         }
         for dim0 in 2..dim + 1 {
-            let mut start0 = 0;
             for etype0 in &entity_types[dim0] {
                 for dim1 in 1..dim0 {
                     let mut cty = vec![];
@@ -300,7 +295,7 @@ impl SerialTopology {
                     let mut start1 = 0;
                     for etype1 in &entity_types[dim1] {
                         let entities1 = &connectivity_neww[etype1][0];
-                        for (ei, entity0) in entities0.iter().enumerate() {
+                        for entity0 in entities0 {
                             let entity = get_reference_cell(*etype0);
                             let mut row = vec![];
                             for i in 0..entity.entity_count(dim1) {
@@ -323,7 +318,6 @@ impl SerialTopology {
                     }
                     connectivity_neww.get_mut(etype0).unwrap()[dim1] = cty;
                 }
-                start0 += connectivity_neww[etype0][0].len();
             }
         }
 
@@ -394,13 +388,9 @@ impl SerialTopology {
 
         Self {
             dim,
-            connectivity,
-            cell_connectivity,
             connectivity_neww,
             cell_connectivity_neww,
             index_map,
-            starts,
-            cell_types: cell_types_new,
             entity_types,
         }
     }
