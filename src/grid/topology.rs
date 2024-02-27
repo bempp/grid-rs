@@ -76,8 +76,8 @@ impl SerialTopology {
         }
 
         // dim1 == 0
-        for dim0 in 1..dim {
-            for etype in &entity_types[dim0] {
+        for (dim0, etypes0) in entity_types.iter().enumerate().take(dim) {
+            for etype in etypes0 {
                 let mut cty: Vec<Vec<usize>> = vec![];
                 for cell_type in &entity_types[dim] {
                     let ref_cell = get_reference_cell(*cell_type);
@@ -139,11 +139,11 @@ impl SerialTopology {
 
         // dim0 == dim
         for cell_type in &entity_types[dim] {
-            for dim1 in 1..dim {
+            for (dim1, etypes0) in entity_types.iter().enumerate().take(dim).skip(1) {
                 let mut cty = vec![];
                 let entities0 = &connectivity[cell_type][0];
                 let mut start = 0;
-                for etype in &entity_types[dim1] {
+                for etype in etypes0 {
                     let entities1 = &connectivity[etype][0];
 
                     for entity0 in entities0 {
@@ -172,13 +172,13 @@ impl SerialTopology {
         }
 
         // dim1 < dim0
-        for dim0 in 2..dim + 1 {
-            for etype0 in &entity_types[dim0] {
-                for dim1 in 1..dim0 {
+        for (dim0, etypes0) in entity_types.iter().enumerate().take(dim + 1).skip(2) {
+            for etype0 in etypes0 {
+                for (dim1, etypes1) in entity_types.iter().enumerate().take(dim0).skip(1) {
                     let mut cty = vec![];
                     let entities0 = &connectivity[etype0][0];
                     let mut start1 = 0;
-                    for etype1 in &entity_types[dim1] {
+                    for etype1 in etypes1 {
                         let entities1 = &connectivity[etype1][0];
                         for entity0 in entities0 {
                             let entity = get_reference_cell(*etype0);
@@ -207,12 +207,12 @@ impl SerialTopology {
         }
 
         // dim1 > dim0
-        for dim0 in 0..dim {
-            for etype0 in &entity_types[dim0] {
-                for dim1 in dim0 + 1..dim + 1 {
+        for (dim0, etypes0) in entity_types.iter().enumerate().take(dim) {
+            for etype0 in etypes0 {
+                for (dim1, etypes1) in entity_types.iter().enumerate().take(dim + 1).skip(1) {
                     let mut data = vec![vec![]; connectivity[etype0][0].len()];
                     let mut start = 0;
-                    for etype1 in &entity_types[dim1] {
+                    for etype1 in etypes1 {
                         for (i, row) in connectivity[etype1][dim0].iter().enumerate() {
                             for v in row {
                                 data[*v].push(start + i);
@@ -228,8 +228,8 @@ impl SerialTopology {
         let mut cell_connectivity = HashMap::new();
         for cell_type in &entity_types[dim] {
             let mut all = HashMap::new();
-            for edim in 0..dim + 1 {
-                for etype in &entity_types[edim] {
+            for (edim, etypes) in entity_types.iter().enumerate().take(dim + 1) {
+                for etype in etypes {
                     all.insert(*etype, vec![]);
                 }
 
@@ -239,7 +239,7 @@ impl SerialTopology {
                         for etype in &entity_types[edim] {
                             let count = connectivity[etype][0].len();
                             if *i < start + count {
-                                all.get_mut(&etype).unwrap().push(*i)
+                                all.get_mut(etype).unwrap().push(*i)
                             }
                             start += count;
                         }
