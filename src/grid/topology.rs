@@ -606,7 +606,7 @@ mod test {
             for dim in 0..t.dim() + 1 {
                 for entity_type in t.entity_types(dim) {
                     let ce = t.cell_entities(*cell_type, *entity_type).unwrap();
-                    if ce.len() > 0 {
+                    if !ce.is_empty() {
                         let n = reference_cell::entity_counts(*cell_type)[dim];
                         for i in 0..t.entity_count(*cell_type) {
                             let con = t.connectivity(*cell_type, i, dim).unwrap();
