@@ -264,12 +264,8 @@ impl Topology for SerialTopology {
     fn index_map(&self) -> &[usize] {
         &self.index_map
     }
-    fn entity_count(&self, dim: usize) -> usize {
-        let mut count = 0;
-        for etype in &self.entity_types[dim] {
-            count += self.connectivity[etype][0].len();
-        }
-        count
+    fn entity_count(&self, etype: ReferenceCellType) -> usize {
+        self.connectivity[&etype][0].len()
     }
     fn cell(&self, index: usize) -> Option<&[usize]> {
         let mut start = 0;
@@ -315,7 +311,11 @@ impl Topology for SerialTopology {
 
     /// Get the indices of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
     fn connectivity(&self, etype: ReferenceCellType, index: usize, dim: usize) -> Option<&[usize]> {
-        Some(&self.connectivity[&etype][dim][index])
+        if self.connectivity.contains_key(&etype) && dim < self.connectivity[&etype].len() && index < self.connectivity[&etype][dim].len() {
+            Some(&self.connectivity[&etype][dim][index])
+        } else {
+            None
+        }
     }
 
     fn entity_ownership(&self, _dim: usize, _index: usize) -> Ownership {
@@ -335,9 +335,9 @@ mod test {
     fn test_counts() {
         let t = example_topology();
         assert_eq!(t.dim(), 2);
-        assert_eq!(t.entity_count(0), 4);
-        assert_eq!(t.entity_count(1), 5);
-        assert_eq!(t.entity_count(2), 2);
+        assert_eq!(t.entity_count(ReferenceCellType::Point), 4);
+        assert_eq!(t.entity_count(ReferenceCellType::Interval), 5);
+        assert_eq!(t.entity_count(ReferenceCellType::Triangle), 2);
     }
 
     #[test]
@@ -453,9 +453,10 @@ mod test {
     fn test_mixed_counts() {
         let t = example_topology_mixed();
         assert_eq!(t.dim(), 2);
-        assert_eq!(t.entity_count(0), 5);
-        assert_eq!(t.entity_count(1), 6);
-        assert_eq!(t.entity_count(2), 2);
+        assert_eq!(t.entity_count(ReferenceCellType::Point), 5);
+        assert_eq!(t.entity_count(ReferenceCellType::Interval), 6);
+        assert_eq!(t.entity_count(ReferenceCellType::Triangle), 1);
+        assert_eq!(t.entity_count(ReferenceCellType::Quadrilateral), 1);
     }
 
     #[test]
@@ -595,5 +596,34 @@ mod test {
             let c = t.connectivity(ReferenceCellType::Interval, id, 2).unwrap();
             assert_eq!(c, faces);
         }
+    }
+
+    fn cell_entities_vs_connectivity(t: &impl Topology) {
+        for cell_type in t.entity_types(t.dim()) {
+            for dim in 0..t.dim() + 1 {
+                for entity_type in t.entity_types(dim) {
+                    let ce = t.cell_entities(*cell_type, *entity_type).unwrap();
+                    if ce.len() > 0 {
+                        let n = reference_cell::entity_counts(*cell_type)[dim];
+                        for i in 0..t.entity_count(*cell_type) {
+                            let con = t.connectivity(*cell_type, i, dim).unwrap();
+                            assert_eq!(con, &ce[n*i..n*(i+1)]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_cell_entities_vs_connectivity() {
+        let t = example_topology();
+        cell_entities_vs_connectivity(&t);
+    }
+
+    #[test]
+    fn test_cell_entities_vs_connectivity_mixes() {
+        let t = example_topology_mixed();
+        cell_entities_vs_connectivity(&t);
     }
 }

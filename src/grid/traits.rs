@@ -21,7 +21,7 @@ pub trait Topology {
     fn index_map(&self) -> &[usize];
 
     /// The number of entities of dimension `dim`
-    fn entity_count(&self, dim: usize) -> usize;
+    fn entity_count(&self, etype: ReferenceCellType) -> usize;
 
     /// The indices of the vertices of the cell with topological index `index`
     fn cell(&self, index: usize) -> Option<&[usize]>;
