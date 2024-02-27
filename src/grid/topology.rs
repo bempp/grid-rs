@@ -311,7 +311,10 @@ impl Topology for SerialTopology {
 
     /// Get the indices of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
     fn connectivity(&self, etype: ReferenceCellType, index: usize, dim: usize) -> Option<&[usize]> {
-        if self.connectivity.contains_key(&etype) && dim < self.connectivity[&etype].len() && index < self.connectivity[&etype][dim].len() {
+        if self.connectivity.contains_key(&etype)
+            && dim < self.connectivity[&etype].len()
+            && index < self.connectivity[&etype][dim].len()
+        {
             Some(&self.connectivity[&etype][dim][index])
         } else {
             None
@@ -607,7 +610,7 @@ mod test {
                         let n = reference_cell::entity_counts(*cell_type)[dim];
                         for i in 0..t.entity_count(*cell_type) {
                             let con = t.connectivity(*cell_type, i, dim).unwrap();
-                            assert_eq!(con, &ce[n*i..n*(i+1)]);
+                            assert_eq!(con, &ce[n * i..n * (i + 1)]);
                         }
                     }
                 }
