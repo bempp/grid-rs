@@ -28,10 +28,10 @@ fn all_in<T: Eq>(a: &[T], b: &[T]) -> bool {
 /// Topology of a serial grid
 pub struct SerialTopology {
     dim: usize,
+    index_map: Vec<usize>,
     cells: Vec<(ReferenceCellType, Vec<usize>)>,
     connectivity: HashMap<ReferenceCellType, Vec<Connectivity>>,
     cell_connectivity: HashMap<ReferenceCellType, Connectivity>,
-    index_map: Vec<usize>,
     entity_types: Vec<Vec<ReferenceCellType>>,
 }
 
@@ -239,10 +239,10 @@ impl SerialTopology {
 
         Self {
             dim,
+            index_map,
             cells,
             connectivity,
             cell_connectivity,
-            index_map,
             entity_types,
         }
     }

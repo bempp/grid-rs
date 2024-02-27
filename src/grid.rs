@@ -1,7 +1,7 @@
 //! Grid implementation
 
-pub mod topology;
 pub mod geometry;
+pub mod topology;
 pub mod traits;
 
 pub use crate::grid::traits::Geometry;
