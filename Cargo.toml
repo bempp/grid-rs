@@ -6,9 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-num = "0.4"
+approx = "0.5"
 bempp-traits = { git = "https://github.com/bempp/bempp-rs.git" }
 bempp-tools = { git = "https://github.com/bempp/bempp-rs.git" }
 bempp-element = { git = "https://github.com/bempp/bempp-rs.git" }
+num = "0.4"
+rlst = { git = "https://github.com/linalg-rs/rlst.git" }
 rlst-dense = { git = "https://github.com/linalg-rs/rlst.git" }
-approx = "0.5"
+rlst-proc-macro = { git = "https://github.com/linalg-rs/rlst.git" }
+rlst-common = { git = "https://github.com/linalg-rs/rlst.git" }
