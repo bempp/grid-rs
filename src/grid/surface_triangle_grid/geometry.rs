@@ -1,13 +1,13 @@
 //! Definition of the Geometry
 
-use std::{iter::Copied, marker::PhantomData};
+use std::marker::PhantomData;
 
 use num::{Float, Zero};
 use rlst::rlst_static_array;
 use rlst_common::types::Scalar;
 use rlst_dense::{rlst_array_from_slice1, rlst_array_from_slice_mut1};
 
-use crate::traits::{GeometryType, GridType};
+use crate::traits::GeometryType;
 
 use super::grid::TriangleSurfaceGrid;
 
