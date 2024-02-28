@@ -2,12 +2,16 @@
 
 use crate::traits::topology::TopologyType;
 
-use super::GridType;
+use super::{GeometryType, GridType};
 
 pub trait CellType {
     type Grid: GridType;
 
     type Topology<'a>: TopologyType
+    where
+        Self: 'a;
+
+    type Geometry<'a>: GeometryType
     where
         Self: 'a;
 
@@ -17,4 +21,6 @@ pub trait CellType {
     fn topology(&self) -> Self::Topology<'_>;
 
     fn grid(&self) -> &Self::Grid;
+
+    fn geometry(&self) -> Self::Geometry<'_>;
 }

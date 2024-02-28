@@ -183,12 +183,13 @@ mod test {
                 .enumerate()
             {
                 println!(
-                    "Cell: {}, Vertex: {}, {}, Edge: {}, {}",
+                    "Cell: {}, Vertex: {}, {}, Edge: {}, {}, Volume: {}",
                     cell.index(),
                     local_index,
                     vertex_index,
                     local_index,
                     edge_index,
+                    cell.geometry().volume(),
                 )
             }
         }
