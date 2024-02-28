@@ -79,7 +79,7 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
         let mut nedges: usize = 0;
         self.cell_to_edges
             .resize_with(self.cells.len(), Default::default);
-        let edge_local: [(usize, usize); 3] = [(0, 1), (1, 2), (2, 0)];
+        let edge_local: [(usize, usize); 3] = [(1, 2), (0, 2), (0, 1)];
         for (cell_index, cell_vertices) in self.cells.iter().enumerate() {
             for (local_index, &(first, second)) in edge_local.iter().enumerate() {
                 let mut first = cell_vertices[first];
