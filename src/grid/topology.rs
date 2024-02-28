@@ -97,17 +97,14 @@ impl SerialTopology {
             for etype in etypes0 {
                 let mut cty: Vec<Vec<(ReferenceCellType, usize)>> = vec![];
                 for cell_type in &entity_types[dim] {
-                    let ref_conn = reference_cell::connectivity(*cell_type);
-                    let ref_entities = (0..reference_cell::entity_counts(*cell_type)[dim0])
-                        .map(|x| ref_conn[dim0][x][0].clone())
-                        .collect::<Vec<Vec<usize>>>();
-
+                    let ref_conn = &reference_cell::connectivity(*cell_type)[dim0];
+                    let nentities = reference_cell::entity_counts(*cell_type)[dim0];
                     for cell in &connectivity[&cell_type][0] {
-                        for e in &ref_entities {
-                            let vertices =
-                                e.iter()
-                                    .map(|x| cell[*x])
-                                    .collect::<Vec<(ReferenceCellType, usize)>>();
+                        for e_n in 0..nentities {
+                            let vertices = ref_conn[e_n][0]
+                                .iter()
+                                .map(|x| cell[*x])
+                                .collect::<Vec<_>>();
                             let mut found = false;
                             for entity in &cty {
                                 if all_equal(entity, &vertices) {
@@ -130,11 +127,7 @@ impl SerialTopology {
         let mut cty = vec![];
         for cell_type in &entity_types[dim] {
             for cell in &connectivity[&cell_type][0] {
-                for j in cell {
-                    if j.1 >= nvertices {
-                        nvertices = j.1 + 1;
-                    }
-                }
+                nvertices = std::cmp::max(nvertices, 1 + cell.iter().map(|j| j.1).max().unwrap());
             }
         }
         for i in 0..nvertices {
@@ -166,16 +159,18 @@ impl SerialTopology {
                 let mut cty = vec![];
                 let mut cty_neww = vec![];
                 let entities0 = &connectivity[cell_type][0];
+                let ref_conn = &reference_cell::connectivity(*cell_type)[dim1];
+                let nentities = reference_cell::entity_counts(*cell_type)[dim1];
                 for etype in etypes0 {
                     let entities1 = &connectivity[etype][0];
 
                     for entity0 in entities0 {
                         let mut row = vec![];
-                        for i in 0..reference_cell::entity_counts(*cell_type)[dim1] {
-                            let vertices = reference_cell::connectivity(*cell_type)[dim1][i][0]
+                        for i in 0..nentities {
+                            let vertices = ref_conn[i][0]
                                 .iter()
                                 .map(|x| entity0[*x])
-                                .collect::<Vec<(ReferenceCellType, usize)>>();
+                                .collect::<Vec<_>>();
                             for (j, entity1) in entities1.iter().enumerate() {
                                 if all_equal(&vertices, entity1) {
                                     row.push((*etype, j));
@@ -197,15 +192,17 @@ impl SerialTopology {
                 for (dim1, etypes1) in entity_types.iter().enumerate().take(dim0).skip(1) {
                     let mut cty = vec![];
                     let entities0 = &connectivity[etype0][0];
+                    let ref_conn = &reference_cell::connectivity(*etype0)[dim1];
+                    let nentities = reference_cell::entity_counts(*etype0)[dim1];
                     for etype1 in etypes1 {
                         let entities1 = &connectivity[etype1][0];
                         for entity0 in entities0 {
                             let mut row = vec![];
-                            for i in 0..reference_cell::entity_counts(*etype0)[dim1] {
-                                let vertices = reference_cell::connectivity(*etype0)[dim1][i][0]
+                            for i in 0..nentities {
+                                let vertices = ref_conn[i][0]
                                     .iter()
                                     .map(|x| entity0[*x])
-                                    .collect::<Vec<(ReferenceCellType, usize)>>();
+                                    .collect::<Vec<_>>();
                                 for (j, entity1) in entities1.iter().enumerate() {
                                     if all_equal(&vertices, entity1) {
                                         row.push((*etype1, j));
