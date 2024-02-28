@@ -40,7 +40,6 @@ impl<T: Float> SerialGeometry<T> {
 
             for (cell_i, element_i) in cell_elements.iter().enumerate() {
                 let size = elements[*element_i].dim();
-                println!("{element_i} {size}");
                 if *element_i == element_index {
                     index_map.push(cell_i);
                     e_cells.extend_from_slice(&cells_input[start..start + size])
@@ -49,8 +48,6 @@ impl<T: Float> SerialGeometry<T> {
             }
             cells.push(e_cells);
         }
-
-        println!("{cells:?}");
 
         Self {
             dim,
@@ -222,8 +219,6 @@ mod test {
     #[test]
     fn test_cell_vertices_mixed() {
         let g = example_geometry_mixed();
-        println!("{:?}", g.cell_vertices(0).unwrap());
-        println!("{:?}", g.cell_vertices(1).unwrap());
         for (cell_i, vertices) in [
             vec![
                 vec![0.0, 0.0],
@@ -237,7 +232,6 @@ mod test {
         .enumerate()
         {
             let vs = g.cell_vertices(cell_i).unwrap();
-            println!("{vs:?}");
             for (p_i, point) in vertices.iter().enumerate() {
                 for (c_i, coord) in point.iter().enumerate() {
                     assert_relative_eq!(*coord, *g.coordinate(vs[p_i], c_i).unwrap());
