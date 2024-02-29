@@ -106,7 +106,7 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
 }
 
 impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
-    type T = T;
+    // type T = T;
 
     type Vertex<'a> = TriangleVertex<'a, T> where Self: 'a;
     type Cell<'a> = TriangleCell<'a, T> where Self: 'a;

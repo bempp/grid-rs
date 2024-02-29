@@ -20,8 +20,11 @@ pub trait Topology {
     /// Return the index map from the input cell numbers to the storage numbers
     fn index_map(&self) -> &[usize];
 
-    /// The number of entities of dimension `dim`
+    /// The number of entities of type `etype`
     fn entity_count(&self, etype: ReferenceCellType) -> usize;
+
+    /// The number of entities of dimension `dim`
+    fn entity_count_by_dim(&self, dim: usize) -> usize;
 
     /// The indices of the vertices of the cell with topological index `index`
     fn cell(&self, index: usize) -> Option<&[usize]>;
@@ -38,6 +41,7 @@ pub trait Topology {
         cell_type: ReferenceCellType,
         dim: usize,
     ) -> Option<&[(ReferenceCellType, usize)]>;
+
     /// Get the indices and types of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
     fn connectivity(
         &self,
@@ -87,15 +91,26 @@ pub trait Geometry {
 
     // ... or would it be better to replace the above 3 functions with an Iter?
     // fn elements_and_cells(&self) -> std::slice::Iter<'_, (&Self::Element, &[usize])>;
+
+    /// Midpoint of a cell
+    fn midpoint(&self, index: usize, point: &mut [Self::T]);
+
+    /// Diameter of a cell
+    fn diameter(&self, index: usize) -> Self::T;
+
+    /// Volume of a cell
+    fn volume(&self, index: usize) -> Self::T;
 }
 
 /// A grid
 pub trait Grid {
+    type T: Float;
+
     /// The type that implements [Topology]
     type Topology: Topology;
 
     /// The type that implements [Geometry]
-    type Geometry: Geometry;
+    type Geometry: Geometry<T = Self::T>;
 
     /// Get the grid topology (See [Topology])
     fn topology(&self) -> &Self::Topology;

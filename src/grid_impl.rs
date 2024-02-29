@@ -1,6 +1,8 @@
 //! Grid implementation
 
 pub mod geometry;
+pub mod grid;
+pub mod serial_grid;
 pub mod topology;
 pub mod traits;
 

@@ -4,10 +4,10 @@ use crate::traits::cell::CellType;
 use crate::traits::vertex::VertexType;
 use crate::types::cell_iterator::CellIterator;
 use crate::types::vertex_iterator::VertexIterator;
-use crate::types::Float;
+// use crate::types::Float;
 
 pub trait GridType: std::marker::Sized {
-    type T: Float;
+    // type T: Float;
 
     type Vertex<'a>: VertexType
     where

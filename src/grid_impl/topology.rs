@@ -255,6 +255,12 @@ impl Topology for SerialTopology {
     fn entity_count(&self, etype: ReferenceCellType) -> usize {
         self.connectivity[&etype][0].len()
     }
+    fn entity_count_by_dim(&self, dim: usize) -> usize {
+        self.entity_types[dim]
+            .iter()
+            .map(|e| self.entity_count(*e))
+            .sum()
+    }
     fn cell(&self, index: usize) -> Option<&[usize]> {
         if index < self.cells.len() {
             Some(&self.cells[index].1)

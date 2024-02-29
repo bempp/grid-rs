@@ -17,6 +17,9 @@ pub struct SerialGeometry<T: Float> {
     coordinates: Vec<T>,
     cells: Vec<Vec<usize>>,
     elements: Vec<CiarletElement>,
+    midpoints: Vec<Vec<T>>,
+    diameters: Vec<T>,
+    volumes: Vec<T>,
 }
 
 unsafe impl<T: Float> Sync for SerialGeometry<T> {}
@@ -30,9 +33,10 @@ impl<T: Float> SerialGeometry<T> {
         cell_elements: &[usize],
     ) -> Self {
         let mut index_map = vec![];
-        //let mut element_changes = vec![];
-        //let mut coordinate_elements = vec![];
         let mut cells = vec![];
+        let mut midpoints = vec![];
+        let mut diameters = vec![];
+        let mut volumes = vec![];
 
         for (element_index, _e) in elements.iter().enumerate() {
             let mut e_cells = vec![];
@@ -49,12 +53,25 @@ impl<T: Float> SerialGeometry<T> {
             cells.push(e_cells);
         }
 
+        for (element_index, _e) in elements.iter().enumerate() {
+            for _cell in &cells[element_index] {
+                midpoints.push(vec![T::from(0.0).unwrap(); dim]); // TODO
+                diameters.push(T::from(0.0).unwrap()); // TODO
+                volumes.push(T::from(0.0).unwrap()); // TODO
+            }
+        }
+
+        println!("{} {}", cells.len(), volumes.len());
+
         Self {
             dim,
             index_map,
             coordinates,
             cells,
             elements,
+            midpoints,
+            diameters,
+            volumes,
         }
     }
 }
@@ -135,6 +152,19 @@ impl<T: Float> Geometry for SerialGeometry<T> {
         } else {
             None
         }
+    }
+
+    fn midpoint(&self, index: usize, point: &mut [Self::T]) {
+        for i in 0..self.dim {
+            point[i] = self.midpoints[index][i];
+        }
+    }
+
+    fn diameter(&self, index: usize) -> Self::T {
+        self.diameters[index]
+    }
+    fn volume(&self, index: usize) -> Self::T {
+        self.volumes[index]
     }
 }
 
