@@ -73,40 +73,6 @@ impl<'a, T: Float + Scalar> TriangleGeometry<'a, T> {
     }
 }
 
-pub struct PointIterator<'a, T: Float + Scalar, Iter: std::iter::Iterator<Item = &'a usize>> {
-    iter: Iter,
-    grid: &'a TriangleSurfaceGrid<T>,
-    _marker1: PhantomData<&'a ()>,
-    _marker2: PhantomData<T>,
-}
-
-impl<'a, T: Float + Scalar, Iter: std::iter::Iterator<Item = &'a usize>>
-    PointIterator<'a, T, Iter>
-{
-    pub fn new(iter: Iter, grid: &'a TriangleSurfaceGrid<T>) -> Self {
-        Self {
-            iter,
-            grid,
-            _marker1: PhantomData,
-            _marker2: PhantomData,
-        }
-    }
-}
-
-impl<'a, T: Float + Scalar, Iter: std::iter::Iterator<Item = &'a usize>> Iterator
-    for PointIterator<'a, T, Iter>
-{
-    type Item = &'a [T];
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(&vertex_index) = self.iter.next() {
-            Some(self.grid.vertices[vertex_index].as_slice())
-        } else {
-            None
-        }
-    }
-}
-
 impl<'a, T: Float + Scalar> GeometryType for TriangleGeometry<'a, T> {
     type Grid = TriangleSurfaceGrid<T>;
 
