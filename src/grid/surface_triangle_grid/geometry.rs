@@ -1,13 +1,16 @@
 //! Definition of the Geometry
 
-use std::marker::PhantomData;
+use std::{iter::Copied, marker::PhantomData};
 
 use num::{Float, Zero};
 use rlst::rlst_static_array;
 use rlst_common::types::Scalar;
 use rlst_dense::{rlst_array_from_slice1, rlst_array_from_slice_mut1};
 
-use crate::traits::GeometryType;
+use crate::{
+    traits::{GeometryType, GridType},
+    types::vertex_iterator::VertexIterator,
+};
 
 use super::grid::TriangleSurfaceGrid;
 
@@ -105,31 +108,37 @@ impl<'a, T: Float + Scalar, Iter: std::iter::Iterator<Item = &'a usize>> Iterato
 }
 
 impl<'a, T: Float + Scalar> GeometryType for TriangleGeometry<'a, T> {
-    type T = T;
+    type Grid = TriangleSurfaceGrid<T>;
 
-    type PointIterator<'iter> = PointIterator<'iter, T, std::slice::Iter<'iter, usize>>
-    where
-        Self: 'iter;
+    type VertexIterator<'iter> =
+        VertexIterator<'iter, Self::Grid, Copied<std::slice::Iter<'iter, usize>>> where Self: 'iter;
+
+    type PointsIterator<'iter> = Self::VertexIterator<'iter> where Self: 'iter;
 
     fn physical_dimension(&self) -> usize {
         3
     }
 
-    fn midpoint(&self, point: &mut [Self::T]) {
+    fn midpoint(&self, point: &mut [<Self::Grid as GridType>::T]) {
         for (ind_out, &ind_in) in point.iter_mut().zip(self.midpoint.iter()) {
             *ind_out = ind_in
         }
     }
 
-    fn diameter(&self) -> Self::T {
+    fn diameter(&self) -> <Self::Grid as GridType>::T {
         self.diameter
     }
 
-    fn volume(&self) -> Self::T {
+    fn volume(&self) -> <Self::Grid as GridType>::T {
         self.volume
     }
 
-    fn corners(&self) -> Self::PointIterator<'_> {
-        PointIterator::new(self.grid.cells[self.cell_index].iter(), self.grid)
+    fn vertices(&self) -> Self::VertexIterator<'_> {
+        self.grid
+            .iter_vertices(self.grid.cells[self.cell_index].iter().copied())
+    }
+
+    fn points(&self) -> Self::PointsIterator<'_> {
+        self.vertices()
     }
 }

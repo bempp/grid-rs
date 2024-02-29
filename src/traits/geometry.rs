@@ -2,20 +2,28 @@
 
 use crate::types::Float;
 
-pub trait GeometryType {
-    type T: Float;
+use super::{GridType, VertexType};
 
-    type PointIterator<'a>: std::iter::Iterator<Item = &'a [Self::T]>
+pub trait GeometryType {
+    type Grid: GridType;
+
+    type VertexIterator<'iter>: std::iter::Iterator<Item = <Self::Grid as GridType>::Vertex<'iter>>
     where
-        Self: 'a;
+        Self: 'iter;
+
+    type PointsIterator<'iter>: std::iter::Iterator<Item = <Self::Grid as GridType>::Vertex<'iter>>
+    where
+        Self: 'iter;
 
     fn physical_dimension(&self) -> usize;
 
-    fn midpoint(&self, point: &mut [Self::T]);
+    fn midpoint(&self, point: &mut [<Self::Grid as GridType>::T]);
 
-    fn diameter(&self) -> Self::T;
+    fn diameter(&self) -> <Self::Grid as GridType>::T;
 
-    fn volume(&self) -> Self::T;
+    fn volume(&self) -> <Self::Grid as GridType>::T;
 
-    fn corners(&self) -> Self::PointIterator<'_>;
+    fn vertices(&self) -> Self::VertexIterator<'_>;
+
+    fn points(&self) -> Self::PointsIterator<'_>;
 }

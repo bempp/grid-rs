@@ -19,7 +19,11 @@ pub trait ReferenceMap {
     /// physical point for each reference point.
     fn reference_to_physical(&self) -> Self::SliceIterator<'_>;
 
-    /// Defines an iterator that returns a slice with the valu of the
+    /// Defines an iterator that returns a slice with the value of the
     /// Jacobian at the physical point for each reference point.
     fn jacobian(&self) -> Self::SliceIterator<'_>;
+
+    /// Defines an iterator that returns a slice with the normal direction
+    /// at each point.
+    fn normal(&self) -> Self::SliceIterator<'_>;
 }
