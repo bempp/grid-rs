@@ -164,14 +164,11 @@ where
     }
 }
 
-struct ReferenceMap<'a, T: Float, GridImpl: Grid<T = T>> {
+pub struct ReferenceMap<'a, GridImpl: Grid> {
     grid: &'a GridImpl,
 }
 
-impl<'grid, T: Float, GridImpl: Grid<T = T>> ReferenceMapType for ReferenceMap<'grid, T, GridImpl>
-where
-    GridImpl: 'grid,
-{
+impl<'a, GridImpl: Grid> ReferenceMapType for ReferenceMap<'a, GridImpl> {
     type Grid = GridImpl;
 
     fn domain_dimension(&self) -> usize {
@@ -186,61 +183,34 @@ where
         panic!();
     }
 
-    fn reference_to_physical(&self, point_index: usize, value: &mut [T]) {
+    fn reference_to_physical(&self, point_index: usize, value: &mut [<Self::Grid as GridType>::T]) {
         panic!();
     }
 
-    fn jacobian(&self, _point_index: usize, value: &mut [T]) {
+    fn jacobian(&self, _point_index: usize, value: &mut [<Self::Grid as GridType>::T]) {
         panic!();
     }
 
-    fn normal(&self, _point_index: usize, value: &mut [T]) {
+    fn normal(&self, _point_index: usize, value: &mut [<Self::Grid as GridType>::T]) {
         panic!();
     }
 }
 
-pub struct ReferenceMapIterator<
-    'a,
-    T: Float,
-    GridImpl: Grid,
-    Iter: std::iter::Iterator<Item = usize>,
-> {
-    iter: Iter,
-    reference_points: &'a [T],
+pub struct ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid>
+where
+    GridImpl: 'a,
+{
     grid: &'a GridImpl,
-    _t: std::marker::PhantomData<T>,
+    _iter: std::marker::PhantomData<Iter>,
 }
 
-impl<'grid, T: Float, GridImpl: Grid<T = T>, Iter: std::iter::Iterator<Item = usize>>
-    ReferenceMapIterator<'grid, T, GridImpl, Iter>
-where
-    GridImpl: 'grid,
+impl<'a, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid> Iterator
+    for ReferenceMapIterator<'a, Iter, GridImpl>
 {
-    pub fn new(iter: Iter, reference_points: &'grid [T], grid: &'grid GridImpl) -> Self {
-        Self {
-            iter,
-            reference_points,
-            grid,
-        }
-    }
-}
-
-impl<'grid, T: Float, GridImpl: Grid<T = T>, Iter: std::iter::Iterator<Item = usize>> Iterator
-    for ReferenceMapIterator<'grid, T, GridImpl, Iter>
-where
-    GridImpl: 'grid,
-{
-    type Item = ReferenceMap<'grid, T, GridImpl>;
+    type Item = ReferenceMap<'a, GridImpl>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(cell_index) = self.iter.next() {
-            Some(
-                self.grid
-                    .reference_to_physical_map(self.reference_points, cell_index),
-            )
-        } else {
-            None
-        }
+        panic!();
     }
 }
 
@@ -250,12 +220,12 @@ where
 {
     type T = T;
 
-    type ReferenceMap<'a> = ReferenceMap<'a, T, GridImpl>
+    type ReferenceMap<'a> = ReferenceMap<'a, GridImpl>
     where
         Self: 'a;
 
     type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>> =
-        ReferenceMapIterator<'a, T, GridImpl, Iter>
+        ReferenceMapIterator<'a, Iter, GridImpl>
     where
         Self: 'a,
         Iter: 'a;
