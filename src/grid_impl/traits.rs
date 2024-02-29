@@ -55,6 +55,7 @@ pub trait Topology {
 ///
 /// This provides information about the physical locations of mesh points in space
 pub trait Geometry {
+    type IndexType: std::fmt::Debug + Eq + Copy;
     type T: Float;
     type Element: FiniteElement;
 
@@ -62,7 +63,7 @@ pub trait Geometry {
     fn dim(&self) -> usize;
 
     /// Return the index map from the input cell numbers to the storage numbers
-    fn index_map(&self) -> &[usize];
+    fn index_map(&self) -> &[Self::IndexType];
 
     /// Get one of the coordinates of a point
     fn coordinate(&self, point_index: usize, coord_index: usize) -> Option<&Self::T>;
@@ -70,14 +71,14 @@ pub trait Geometry {
     /// The number of points stored in the geometry
     fn point_count(&self) -> usize;
 
-    /// Get the vertex numbers of a cell
-    fn cell_vertices(&self, index: usize) -> Option<&[usize]>;
+    /// Get the indices of the points of a cell
+    fn cell_points(&self, index: Self::IndexType) -> Option<&[usize]>;
 
     /// The number of cells
     fn cell_count(&self) -> usize;
 
     /// Get the element used to represent a cell
-    fn cell_element(&self, index: usize) -> Option<&Self::Element>;
+    fn cell_element(&self, index: Self::IndexType) -> Option<&Self::Element>;
 
     /// Get the number of distinct geometry elements
     fn element_count(&self) -> usize;
@@ -90,13 +91,13 @@ pub trait Geometry {
     // fn elements_and_cells(&self) -> std::slice::Iter<'_, (&Self::Element, &[usize])>;
 
     /// Midpoint of a cell
-    fn midpoint(&self, index: usize, point: &mut [Self::T]);
+    fn midpoint(&self, index: Self::IndexType, point: &mut [Self::T]);
 
     /// Diameter of a cell
-    fn diameter(&self, index: usize) -> Self::T;
+    fn diameter(&self, index: Self::IndexType) -> Self::T;
 
     /// Volume of a cell
-    fn volume(&self, index: usize) -> Self::T;
+    fn volume(&self, index: Self::IndexType) -> Self::T;
 }
 
 /// A grid

@@ -8,14 +8,14 @@ use num::Float;
 /// Geometry of a serial grid
 pub struct SerialGeometry<T: Float> {
     dim: usize,
-    index_map: Vec<usize>,
+    index_map: Vec<(usize, usize)>,
     // TODO: change storage to rlst
     coordinates: Vec<T>,
     cells: Vec<Vec<usize>>,
     elements: Vec<CiarletElement>,
-    midpoints: Vec<Vec<T>>,
-    diameters: Vec<T>,
-    volumes: Vec<T>,
+    midpoints: Vec<Vec<Vec<T>>>,
+    diameters: Vec<Vec<T>>,
+    volumes: Vec<Vec<T>>,
 }
 
 unsafe impl<T: Float> Sync for SerialGeometry<T> {}
@@ -28,7 +28,7 @@ impl<T: Float> SerialGeometry<T> {
         elements: Vec<CiarletElement>,
         cell_elements: &[usize],
     ) -> Self {
-        let mut index_map = vec![];
+        let mut index_map = vec![(0, 0); cell_elements.len()];
         let mut cells = vec![];
         let mut midpoints = vec![];
         let mut diameters = vec![];
@@ -41,8 +41,8 @@ impl<T: Float> SerialGeometry<T> {
             for (cell_i, element_i) in cell_elements.iter().enumerate() {
                 let size = elements[*element_i].dim();
                 if *element_i == element_index {
-                    index_map.push(cell_i);
-                    e_cells.extend_from_slice(&cells_input[start..start + size])
+                    index_map[cell_i] = (element_index, e_cells.len());
+                    e_cells.extend_from_slice(&cells_input[start..start + size]);
                 }
                 start += size;
             }
@@ -50,11 +50,17 @@ impl<T: Float> SerialGeometry<T> {
         }
 
         for (element_index, _e) in elements.iter().enumerate() {
+            let mut e_midpoints = vec![];
+            let mut e_diameters = vec![];
+            let mut e_volumes = vec![];
             for _cell in &cells[element_index] {
-                midpoints.push(vec![T::from(0.0).unwrap(); dim]); // TODO
-                diameters.push(T::from(0.0).unwrap()); // TODO
-                volumes.push(T::from(0.0).unwrap()); // TODO
+                e_midpoints.push(vec![T::from(0.0).unwrap(); dim]); // TODO
+                e_diameters.push(T::from(0.0).unwrap()); // TODO
+                e_volumes.push(T::from(0.0).unwrap()); // TODO
             }
+            midpoints.push(e_midpoints);
+            diameters.push(e_diameters);
+            volumes.push(e_volumes);
         }
 
         println!("{} {}", cells.len(), volumes.len());
@@ -73,6 +79,7 @@ impl<T: Float> SerialGeometry<T> {
 }
 
 impl<T: Float> Geometry for SerialGeometry<T> {
+    type IndexType = (usize, usize);
     type T = T;
     type Element = CiarletElement;
 
@@ -80,7 +87,7 @@ impl<T: Float> Geometry for SerialGeometry<T> {
         self.dim
     }
 
-    fn index_map(&self) -> &[usize] {
+    fn index_map(&self) -> &[(usize, usize)] {
         &self.index_map
     }
 
@@ -96,19 +103,17 @@ impl<T: Float> Geometry for SerialGeometry<T> {
         self.coordinates.len() / self.dim
     }
 
-    fn cell_vertices(&self, index: usize) -> Option<&[usize]> {
-        let mut start = 0;
-        for (element_index, e) in self.elements.iter().enumerate() {
-            let npts = e.dim();
-            let ncells = self.cells[element_index].len() / npts;
-            if index < start + ncells {
-                return Some(
-                    &self.cells[element_index][npts * (index - start)..npts * (index - start + 1)],
-                );
+    fn cell_points(&self, index: (usize, usize)) -> Option<&[usize]> {
+        if index.0 < self.cells.len() {
+            let npts = self.elements[index.0].dim();
+            if index.1 * npts < self.cells[index.0].len() {
+                Some(&self.cells[index.0][npts * index.1..npts * (index.1 + 1)])
+            } else {
+                None
             }
-            start += ncells;
+        } else {
+            None
         }
-        None
     }
 
     fn cell_count(&self) -> usize {
@@ -119,17 +124,12 @@ impl<T: Float> Geometry for SerialGeometry<T> {
             .sum()
     }
 
-    fn cell_element(&self, index: usize) -> Option<&Self::Element> {
-        let mut start = 0;
-        for (element_index, e) in self.elements.iter().enumerate() {
-            let npts = e.dim();
-            let ncells = self.cells[element_index].len() / npts;
-            if index < start + ncells {
-                return Some(e);
-            }
-            start += ncells;
+    fn cell_element(&self, index: (usize, usize)) -> Option<&Self::Element> {
+        if index.0 < self.cells.len() {
+            Some(&self.elements[index.0])
+        } else {
+            None
         }
-        None
     }
 
     fn element_count(&self) -> usize {
@@ -150,15 +150,15 @@ impl<T: Float> Geometry for SerialGeometry<T> {
         }
     }
 
-    fn midpoint(&self, index: usize, point: &mut [Self::T]) {
-        point.copy_from_slice(&self.midpoints[index]);
+    fn midpoint(&self, index: (usize, usize), point: &mut [Self::T]) {
+        point.copy_from_slice(&self.midpoints[index.0][index.1]);
     }
 
-    fn diameter(&self, index: usize) -> Self::T {
-        self.diameters[index]
+    fn diameter(&self, index: (usize, usize)) -> Self::T {
+        self.diameters[index.0][index.1]
     }
-    fn volume(&self, index: usize) -> Self::T {
-        self.volumes[index]
+    fn volume(&self, index: (usize, usize)) -> Self::T {
+        self.volumes[index.0][index.1]
     }
 }
 
@@ -193,17 +193,17 @@ mod test {
     }
 
     #[test]
-    fn test_cell_vertices() {
+    fn test_cell_points() {
         let g = example_geometry();
-        for (cell_i, vertices) in [
+        for (cell_i, points) in [
             vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![1.0, 1.0]],
             vec![vec![0.0, 0.0], vec![1.0, 1.0], vec![0.0, 1.0]],
         ]
         .iter()
         .enumerate()
         {
-            let vs = g.cell_vertices(cell_i).unwrap();
-            for (p_i, point) in vertices.iter().enumerate() {
+            let vs = g.cell_points((0, cell_i)).unwrap();
+            for (p_i, point) in points.iter().enumerate() {
                 for (c_i, coord) in point.iter().enumerate() {
                     assert_relative_eq!(*coord, *g.coordinate(vs[p_i], c_i).unwrap());
                 }
@@ -241,22 +241,22 @@ mod test {
     }
 
     #[test]
-    fn test_cell_vertices_mixed() {
+    fn test_cell_points_mixed() {
         let g = example_geometry_mixed();
-        for (cell_i, vertices) in [
-            vec![
-                vec![0.0, 0.0],
-                vec![1.0, 0.0],
-                vec![0.0, 1.0],
-                vec![1.0, 1.0],
-            ],
-            vec![vec![1.0, 0.0], vec![2.0, 0.0], vec![1.0, 1.0]],
-        ]
-        .iter()
-        .enumerate()
-        {
-            let vs = g.cell_vertices(cell_i).unwrap();
-            for (p_i, point) in vertices.iter().enumerate() {
+        for (cell_i, points) in [
+            (
+                (0, 0),
+                vec![
+                    vec![0.0, 0.0],
+                    vec![1.0, 0.0],
+                    vec![0.0, 1.0],
+                    vec![1.0, 1.0],
+                ],
+            ),
+            ((1, 0), vec![vec![1.0, 0.0], vec![2.0, 0.0], vec![1.0, 1.0]]),
+        ] {
+            let vs = g.cell_points(cell_i).unwrap();
+            for (p_i, point) in points.iter().enumerate() {
                 for (c_i, coord) in point.iter().enumerate() {
                     assert_relative_eq!(*coord, *g.coordinate(vs[p_i], c_i).unwrap());
                 }

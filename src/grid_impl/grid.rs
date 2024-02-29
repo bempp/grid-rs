@@ -24,7 +24,7 @@ pub struct CellTopology<'a, GridImpl: Grid> {
 }
 pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
     grid: &'a GridImpl,
-    index: usize,
+    index: <<GridImpl as Grid>::Geometry as Geometry>::IndexType,
     _t: std::marker::PhantomData<T>,
 }
 
