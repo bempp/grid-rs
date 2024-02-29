@@ -2,16 +2,16 @@
 
 use crate::types::Float;
 
-use super::{GridType, VertexType};
+use super::{GridType, PointType};
 
 pub trait GeometryType {
     type Grid: GridType;
 
-    type VertexIterator<'iter>: std::iter::Iterator<Item = <Self::Grid as GridType>::Vertex<'iter>>
+    type VertexIterator<'iter>: std::iter::Iterator<Item = <Self::Grid as GridType>::Point<'iter>>
     where
         Self: 'iter;
 
-    type PointsIterator<'iter>: std::iter::Iterator<Item = <Self::Grid as GridType>::Vertex<'iter>>
+    type PointsIterator<'iter>: std::iter::Iterator<Item = <Self::Grid as GridType>::Point<'iter>>
     where
         Self: 'iter;
 

@@ -1,15 +1,15 @@
 //! Definition of a grid
 
 use crate::traits::cell::CellType;
-use crate::traits::vertex::VertexType;
+use crate::traits::point::PointType;
 use crate::types::cell_iterator::CellIterator;
-use crate::types::vertex_iterator::VertexIterator;
+use crate::types::vertex_iterator::PointIterator;
 use crate::types::Float;
 
 pub trait GridType: std::marker::Sized {
     type T: Float;
 
-    type Vertex<'a>: VertexType
+    type Point<'a>: PointType
     where
         Self: 'a;
     type Edge;
@@ -19,27 +19,30 @@ pub trait GridType: std::marker::Sized {
         Self: 'a;
 
     fn number_of_vertices(&self) -> usize;
+
+    fn number_of_points(&self) -> usize;
+
     fn number_of_cells(&self) -> usize;
 
-    fn vertex_index_from_id(&self, id: usize) -> usize;
-    fn vertex_id_from_index(&self, index: usize) -> usize;
+    fn point_index_from_id(&self, id: usize) -> usize;
+    fn point_id_from_index(&self, index: usize) -> usize;
 
     fn cell_index_from_id(&self, id: usize) -> usize;
     fn cell_id_from_index(&self, index: usize) -> usize;
 
-    fn vertex_from_index(&self, index: usize) -> Self::Vertex<'_>;
+    fn point_from_index(&self, index: usize) -> Self::Point<'_>;
 
     fn cell_from_index(&self, index: usize) -> Self::Cell<'_>;
 
-    fn iter_vertices<Iter: std::iter::Iterator<Item = usize>>(
+    fn iter_points<Iter: std::iter::Iterator<Item = usize>>(
         &self,
         index_iter: Iter,
-    ) -> VertexIterator<'_, Self, Iter> {
-        VertexIterator::new(index_iter, self)
+    ) -> PointIterator<'_, Self, Iter> {
+        PointIterator::new(index_iter, self)
     }
 
-    fn iter_all_vertices(&self) -> VertexIterator<'_, Self, std::ops::Range<usize>> {
-        self.iter_vertices(0..self.number_of_vertices())
+    fn iter_all_points(&self) -> PointIterator<'_, Self, std::ops::Range<usize>> {
+        self.iter_points(0..self.number_of_vertices())
     }
 
     fn iter_cells<Iter: std::iter::Iterator<Item = usize>>(

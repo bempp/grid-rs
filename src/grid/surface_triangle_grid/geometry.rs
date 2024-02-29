@@ -9,7 +9,7 @@ use rlst_dense::{rlst_array_from_slice1, rlst_array_from_slice_mut1};
 
 use crate::{
     traits::{GeometryType, GridType},
-    types::vertex_iterator::VertexIterator,
+    types::vertex_iterator::PointIterator,
 };
 
 use super::grid::TriangleSurfaceGrid;
@@ -111,7 +111,7 @@ impl<'a, T: Float + Scalar> GeometryType for TriangleGeometry<'a, T> {
     type Grid = TriangleSurfaceGrid<T>;
 
     type VertexIterator<'iter> =
-        VertexIterator<'iter, Self::Grid, Copied<std::slice::Iter<'iter, usize>>> where Self: 'iter;
+        PointIterator<'iter, Self::Grid, Copied<std::slice::Iter<'iter, usize>>> where Self: 'iter;
 
     type PointsIterator<'iter> = Self::VertexIterator<'iter> where Self: 'iter;
 
@@ -135,7 +135,7 @@ impl<'a, T: Float + Scalar> GeometryType for TriangleGeometry<'a, T> {
 
     fn vertices(&self) -> Self::VertexIterator<'_> {
         self.grid
-            .iter_vertices(self.grid.cells[self.cell_index].iter().copied())
+            .iter_points(self.grid.cells[self.cell_index].iter().copied())
     }
 
     fn points(&self) -> Self::PointsIterator<'_> {

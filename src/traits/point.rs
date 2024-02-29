@@ -2,7 +2,7 @@
 
 use crate::types::Float;
 
-pub trait VertexType {
+pub trait PointType {
     type T: Float;
 
     fn coords(&self, data: &mut [Self::T]);
