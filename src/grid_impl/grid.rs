@@ -29,8 +29,8 @@ pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
 impl<'a, T: Float, G: Geometry<T = T>> VertexType for Vertex<'a, T, G> {
     type T = T;
     fn coords(&self, data: &mut [Self::T]) {
-        for d in 0..self.geometry.dim() {
-            data[d] = *self.geometry.coordinate(self.index, d).unwrap();
+        for (dim, d) in data.iter_mut().enumerate() {
+            *d = *self.geometry.coordinate(self.index, dim).unwrap();
         }
     }
     fn index(&self) -> usize {
@@ -59,18 +59,18 @@ where
 
     fn topology(&self) -> Self::Topology<'_> {
         CellTopology::<'_, GridImpl> {
-            grid: &self.grid, // TODO: replace with just topology
+            grid: self.grid, // TODO: replace with just topology
             index: self.grid.topology().index_map()[self.index],
         }
     }
 
     fn grid(&self) -> &Self::Grid {
-        &self.grid
+        self.grid
     }
 
     fn geometry(&self) -> Self::Geometry<'_> {
         CellGeometry::<'_, T, GridImpl> {
-            grid: &self.grid,
+            grid: self.grid,
             index: self.grid.geometry().index_map()[self.index],
             _t: std::marker::PhantomData,
         }
@@ -181,7 +181,7 @@ impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
 
     fn vertex_from_index(&self, index: usize) -> Self::Vertex<'_> {
         Self::Vertex {
-            geometry: &self.geometry(),
+            geometry: self.geometry(),
             index,
             _t: std::marker::PhantomData,
         }
@@ -189,7 +189,7 @@ impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
 
     fn cell_from_index(&self, index: usize) -> Self::Cell<'_> {
         Self::Cell {
-            grid: &self,
+            grid: self,
             index,
             _t: std::marker::PhantomData,
         }

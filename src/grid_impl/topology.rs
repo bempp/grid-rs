@@ -98,13 +98,9 @@ impl SerialTopology {
                 let mut cty: Vec<Vec<(ReferenceCellType, usize)>> = vec![];
                 for cell_type in &entity_types[dim] {
                     let ref_conn = &reference_cell::connectivity(*cell_type)[dim0];
-                    let nentities = reference_cell::entity_counts(*cell_type)[dim0];
                     for cell in &connectivity[&cell_type][0] {
-                        for e_n in 0..nentities {
-                            let vertices = ref_conn[e_n][0]
-                                .iter()
-                                .map(|x| cell[*x])
-                                .collect::<Vec<_>>();
+                        for rc in ref_conn {
+                            let vertices = rc[0].iter().map(|x| cell[*x]).collect::<Vec<_>>();
                             let mut found = false;
                             for entity in &cty {
                                 if all_equal(entity, &vertices) {
@@ -160,17 +156,13 @@ impl SerialTopology {
                 let mut cty_neww = vec![];
                 let entities0 = &connectivity[cell_type][0];
                 let ref_conn = &reference_cell::connectivity(*cell_type)[dim1];
-                let nentities = reference_cell::entity_counts(*cell_type)[dim1];
                 for etype in etypes0 {
                     let entities1 = &connectivity[etype][0];
 
                     for entity0 in entities0 {
                         let mut row = vec![];
-                        for i in 0..nentities {
-                            let vertices = ref_conn[i][0]
-                                .iter()
-                                .map(|x| entity0[*x])
-                                .collect::<Vec<_>>();
+                        for rc in ref_conn {
+                            let vertices = rc[0].iter().map(|x| entity0[*x]).collect::<Vec<_>>();
                             for (j, entity1) in entities1.iter().enumerate() {
                                 if all_equal(&vertices, entity1) {
                                     row.push((*etype, j));
@@ -193,16 +185,13 @@ impl SerialTopology {
                     let mut cty = vec![];
                     let entities0 = &connectivity[etype0][0];
                     let ref_conn = &reference_cell::connectivity(*etype0)[dim1];
-                    let nentities = reference_cell::entity_counts(*etype0)[dim1];
                     for etype1 in etypes1 {
                         let entities1 = &connectivity[etype1][0];
                         for entity0 in entities0 {
                             let mut row = vec![];
-                            for i in 0..nentities {
-                                let vertices = ref_conn[i][0]
-                                    .iter()
-                                    .map(|x| entity0[*x])
-                                    .collect::<Vec<_>>();
+                            for rc in ref_conn {
+                                let vertices =
+                                    rc[0].iter().map(|x| entity0[*x]).collect::<Vec<_>>();
                                 for (j, entity1) in entities1.iter().enumerate() {
                                     if all_equal(&vertices, entity1) {
                                         row.push((*etype1, j));

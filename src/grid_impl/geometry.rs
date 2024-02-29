@@ -155,9 +155,7 @@ impl<T: Float> Geometry for SerialGeometry<T> {
     }
 
     fn midpoint(&self, index: usize, point: &mut [Self::T]) {
-        for i in 0..self.dim {
-            point[i] = self.midpoints[index][i];
-        }
+        point.copy_from_slice(&self.midpoints[index]);
     }
 
     fn diameter(&self, index: usize) -> Self::T {

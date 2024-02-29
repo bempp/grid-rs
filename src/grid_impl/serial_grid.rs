@@ -1,6 +1,6 @@
 //! Serial implementation of a grid
 
-use crate::grid_impl::traits::{Geometry, Grid, Topology};
+use crate::grid_impl::traits::Grid;
 use crate::grid_impl::{geometry::SerialGeometry, topology::SerialTopology};
 use crate::reference_cell::ReferenceCellType;
 use bempp_element::element::{create_element, ElementFamily};
@@ -15,10 +15,10 @@ pub struct SerialGrid<T: Float> {
 
 impl<T: Float> SerialGrid<T> {
     pub fn new(
-        vertices: Vec<T>,
-        cells: &[usize],
-        cell_types: &[ReferenceCellType],
-        cell_degrees: &[usize],
+        _vertices: Vec<T>,
+        _cells: &[usize],
+        _cell_types: &[ReferenceCellType],
+        _cell_degrees: &[usize],
     ) -> Self {
         // TODO
         let topology = SerialTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2]);
