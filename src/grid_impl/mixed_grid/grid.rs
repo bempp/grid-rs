@@ -1,7 +1,7 @@
 //! Serial implementation of a grid
 
 use crate::grid_impl::traits::Grid;
-use crate::grid_impl::{geometry::SerialGeometry, topology::SerialTopology};
+use crate::grid_impl::mixed_grid::{geometry::SerialGeometry, topology::SerialTopology};
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use bempp_element::element::{create_element, ElementFamily};
@@ -9,12 +9,12 @@ use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
 
 /// A serial grid
-pub struct SerialGrid<T: Float> {
+pub struct SerialMixedGrid<T: Float> {
     topology: SerialTopology,
     geometry: SerialGeometry<T>,
 }
 
-impl<T: Float> SerialGrid<T> {
+impl<T: Float> SerialMixedGrid<T> {
     pub fn new(
         points: Vec<T>,
         gdim: usize,
@@ -79,7 +79,7 @@ impl<T: Float> SerialGrid<T> {
 }
 
 /// A grid
-impl<T: Float> Grid for SerialGrid<T> {
+impl<T: Float> Grid for SerialMixedGrid<T> {
     type T = T;
 
     /// The type that implements [Topology]

@@ -198,12 +198,12 @@ impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
 #[cfg(test)]
 mod test {
     use crate::grid_impl::grid::*;
-    use crate::grid_impl::serial_grid::SerialGrid;
+    use crate::grid_impl::mixed_grid::SerialMixedGrid;
     use crate::reference_cell::ReferenceCellType;
 
     #[test]
     fn test_grid_mixed_cell_type() {
-        let grid = SerialGrid::<f64>::new(
+        let grid = SerialMixedGrid::<f64>::new(
             vec![
                 -1.0,
                 0.0,

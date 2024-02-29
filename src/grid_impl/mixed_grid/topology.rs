@@ -306,7 +306,7 @@ impl Topology for SerialTopology {
 
 #[cfg(test)]
 mod test {
-    use crate::grid_impl::topology::*;
+    use crate::grid_impl::mixed_grid::topology::*;
 
     fn example_topology() -> SerialTopology {
         SerialTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2])

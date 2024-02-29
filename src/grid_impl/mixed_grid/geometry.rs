@@ -163,7 +163,7 @@ impl<T: Float> Geometry for SerialGeometry<T> {
 
 #[cfg(test)]
 mod test {
-    use crate::grid_impl::geometry::*;
+    use crate::grid_impl::mixed_grid::geometry::*;
     use approx::*;
     use bempp_element::element::{create_element, ElementFamily};
     use bempp_traits::element::Continuity;
