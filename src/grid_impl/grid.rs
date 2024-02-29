@@ -1,12 +1,14 @@
 use crate::grid_impl::traits::{Geometry, Grid, Topology};
 use crate::traits::{
     cell::CellType, geometry::GeometryType, grid::GridType, topology::TopologyType,
-    vertex::VertexType,
+    point::PointType,
 };
 use num::Float;
 use std::iter::Copied;
+use crate::types::vertex_iterator::PointIterator;
+use crate::reference_cell::ReferenceCellType;
 
-pub struct Vertex<'a, T: Float, G: Geometry> {
+pub struct Point<'a, T: Float, G: Geometry> {
     geometry: &'a G,
     index: usize,
     _t: std::marker::PhantomData<T>,
@@ -26,7 +28,7 @@ pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
     _t: std::marker::PhantomData<T>,
 }
 
-impl<'a, T: Float, G: Geometry<T = T>> VertexType for Vertex<'a, T, G> {
+impl<'a, T: Float, G: Geometry<T = T>> PointType for Point<'a, T, G> {
     type T = T;
     fn coords(&self, data: &mut [Self::T]) {
         assert_eq!(data.len(), self.geometry.dim());
@@ -114,60 +116,62 @@ impl<'grid, T: Float, GridImpl: Grid<T = T>> GeometryType for CellGeometry<'grid
 where
     GridImpl: 'grid,
 {
-    type T = T;
+    type Grid = GridImpl;
 
-    // This assumed that points are stored xyzxyzxyz. Would it be better to have
-    // an iterator through the indices, then GridType::vertex_From_index
-    type PointIterator<'a> = Copied<std::slice::Iter<'a, &'a [Self::T]>>
-    where
-        Self: 'a;
+    type VertexIterator<'iter> =
+        PointIterator<'iter, Self::Grid, Copied<std::slice::Iter<'iter, usize>>> where Self: 'iter;
+
+    type PointIterator<'iter> = Self::VertexIterator<'iter> where Self: 'iter;
 
     fn physical_dimension(&self) -> usize {
         self.grid.geometry().dim()
     }
 
-    fn midpoint(&self, point: &mut [Self::T]) {
+    fn midpoint(&self, point: &mut [T]) {
         self.grid.geometry().midpoint(self.index, point)
     }
 
-    fn diameter(&self) -> Self::T {
+    fn diameter(&self) -> T {
         self.grid.geometry().diameter(self.index)
     }
 
-    fn volume(&self) -> Self::T {
+    fn volume(&self) -> T {
         self.grid.geometry().volume(self.index)
     }
 
-    fn corners(&self) -> Self::PointIterator<'_> {
+    fn points(&self) -> Self::PointIterator<'_> {
+        panic!();
+    }
+    fn vertices(&self) -> Self::VertexIterator<'_> {
         panic!();
     }
 }
 
 impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
+    type T = T;
     //  PROPOSAL:
     //  Vertex = one of the corners of a cell
     //  Point = a point in the geometry
 
-    type Vertex<'a> = Vertex<'a, T, GridImpl::Geometry> where Self: 'a;
+    type Point<'a> = Point<'a, T, GridImpl::Geometry> where Self: 'a;
     type Cell<'a> = Cell<'a, T, GridImpl> where Self: 'a;
     type Edge = ();
     type Face = ();
 
-    //fn number_of_points(&self) -> usize {
-    //    self.geometry().point_count()
-    //}
-    fn number_of_vertices(&self) -> usize {
-        // self.topology().entity_types(self.topology().dim()).point_count()
+    fn number_of_points(&self) -> usize {
         self.geometry().point_count()
+    }
+    fn number_of_vertices(&self) -> usize {
+        self.topology().entity_count(ReferenceCellType::Point)
     }
     fn number_of_cells(&self) -> usize {
         self.geometry().cell_count()
     }
 
-    fn vertex_index_from_id(&self, id: usize) -> usize {
+    fn point_index_from_id(&self, id: usize) -> usize {
         id
     }
-    fn vertex_id_from_index(&self, index: usize) -> usize {
+    fn point_id_from_index(&self, index: usize) -> usize {
         index
     }
 
@@ -178,8 +182,8 @@ impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
         index
     }
 
-    fn vertex_from_index(&self, index: usize) -> Self::Vertex<'_> {
-        Self::Vertex {
+    fn point_from_index(&self, index: usize) -> Self::Point<'_> {
+        Self::Point {
             geometry: self.geometry(),
             index,
             _t: std::marker::PhantomData,
@@ -199,7 +203,6 @@ impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
 mod test {
     use crate::grid_impl::grid::*;
     use crate::grid_impl::mixed_grid::SerialMixedGrid;
-    use crate::reference_cell::ReferenceCellType;
 
     #[test]
     fn test_grid_mixed_cell_type() {
@@ -244,7 +247,7 @@ mod test {
         );
 
         let mut coords = vec![0.0; grid.geometry().dim()];
-        for vertex in grid.iter_all_vertices() {
+        for vertex in grid.iter_all_points() {
             vertex.coords(coords.as_mut_slice());
             println!("{:#?}", coords);
         }
