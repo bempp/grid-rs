@@ -248,9 +248,13 @@ mod test {
             &[2, 1, 1],
         );
 
+        assert_eq!(grid.number_of_vertices(), 6);
+        assert_eq!(grid.number_of_points(), 9);
+        assert_eq!(grid.number_of_cells(), 3);
+
         let mut coords = vec![0.0; grid.geometry().dim()];
-        for vertex in grid.iter_all_points() {
-            vertex.coords(coords.as_mut_slice());
+        for point in grid.iter_all_points() {
+            point.coords(coords.as_mut_slice());
             println!("{:#?}", coords);
         }
 
@@ -275,7 +279,6 @@ mod test {
                 )
             }
         }
-        // assert_eq!(0, 1);
     }
 
     #[test]
@@ -291,9 +294,13 @@ mod test {
             2,
         );
 
+        assert_eq!(grid.number_of_vertices(), 4);
+        assert_eq!(grid.number_of_points(), 9);
+        assert_eq!(grid.number_of_cells(), 2);
+
         let mut coords = vec![0.0; grid.geometry().dim()];
-        for vertex in grid.iter_all_points() {
-            vertex.coords(coords.as_mut_slice());
+        for point in grid.iter_all_points() {
+            point.coords(coords.as_mut_slice());
             println!("{:#?}", coords);
         }
 
@@ -318,6 +325,5 @@ mod test {
                 )
             }
         }
-        // assert_eq!(0, 1);
     }
 }

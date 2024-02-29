@@ -42,7 +42,7 @@ pub trait GridType: std::marker::Sized {
     }
 
     fn iter_all_points(&self) -> PointIterator<'_, Self, std::ops::Range<usize>> {
-        self.iter_points(0..self.number_of_vertices())
+        self.iter_points(0..self.number_of_points())
     }
 
     fn iter_cells<Iter: std::iter::Iterator<Item = usize>>(
