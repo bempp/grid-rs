@@ -1,14 +1,9 @@
 //! Implementation of grid geometry
 
 use crate::grid_impl::traits::Geometry;
-use num::Float;
-//use crate::grid::traits::{Ownership, Geometry};
-//use crate::reference_cell;
-//use crate::traits::cell::ReferenceCellType;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
-
-//use std::collections::HashMap;
+use num::Float;
 
 /// Geometry of a serial grid
 pub struct SerialGeometry<T: Float> {
