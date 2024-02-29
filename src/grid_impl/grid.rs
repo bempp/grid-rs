@@ -29,6 +29,7 @@ pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
 impl<'a, T: Float, G: Geometry<T = T>> VertexType for Vertex<'a, T, G> {
     type T = T;
     fn coords(&self, data: &mut [Self::T]) {
+        assert_eq!(data.len(), self.geometry.dim());
         for (dim, d) in data.iter_mut().enumerate() {
             *d = *self.geometry.coordinate(self.index, dim).unwrap();
         }
@@ -137,15 +138,13 @@ where
         self.grid.geometry().volume(self.index)
     }
 
-    // PROPOSAL:
-    //  Rename to points
     fn corners(&self) -> Self::PointIterator<'_> {
         panic!();
     }
 }
 
 impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
-    // PROPOSAL:
+    //  PROPOSAL:
     //  Vertex = one of the corners of a cell
     //  Point = a point in the geometry
 
@@ -200,13 +199,26 @@ impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
 mod test {
     use crate::grid_impl::grid::*;
     use crate::grid_impl::serial_grid::SerialGrid;
+    use crate::reference_cell::ReferenceCellType;
 
     #[test]
-    fn test_grid() {
-        // TODO
-        let grid = SerialGrid::<f64>::new(vec![], &[], &[], &[]);
+    fn test_grid_mixed_cell_type() {
+        let grid = SerialGrid::<f64>::new(
+            vec![
+                -1.0, 0.0, 0.0, -0.5, 0.0, 0.2, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0,
+                -0.7071, 0.7071, 0.0, 0.0, 0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0,
+            ],
+            3,
+            &[0, 2, 7, 6, 5, 1, 2, 3, 7, 8, 3, 4, 8],
+            &[
+                ReferenceCellType::Triangle,
+                ReferenceCellType::Quadrilateral,
+                ReferenceCellType::Triangle,
+            ],
+            &[2, 1, 1],
+        );
 
-        let mut coords = [0.0; 3];
+        let mut coords = vec![0.0; grid.geometry().dim()];
         for vertex in grid.iter_all_vertices() {
             vertex.coords(coords.as_mut_slice());
             println!("{:#?}", coords);
@@ -230,7 +242,5 @@ mod test {
                 )
             }
         }
-
-        assert_eq!(1, 0);
     }
 }

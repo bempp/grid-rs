@@ -2,9 +2,10 @@
 
 use crate::grid_impl::traits::Grid;
 use crate::grid_impl::{geometry::SerialGeometry, topology::SerialTopology};
+use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use bempp_element::element::{create_element, ElementFamily};
-use bempp_traits::element::Continuity;
+use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
 
 /// A serial grid
@@ -15,29 +16,63 @@ pub struct SerialGrid<T: Float> {
 
 impl<T: Float> SerialGrid<T> {
     pub fn new(
-        _vertices: Vec<T>,
-        _cells: &[usize],
-        _cell_types: &[ReferenceCellType],
-        _cell_degrees: &[usize],
+        points: Vec<T>,
+        gdim: usize,
+        cells: &[usize],
+        cell_types: &[ReferenceCellType],
+        cell_degrees: &[usize],
     ) -> Self {
-        // TODO
-        let topology = SerialTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2]);
-        let p1triangle = create_element(
-            ElementFamily::Lagrange,
-            bempp_element::cell::ReferenceCellType::Triangle,
-            1,
-            Continuity::Continuous,
-        );
-        let geometry = SerialGeometry::<T>::new(
-            [0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0]
-                .iter()
-                .map(|x| T::from(*x).unwrap())
-                .collect::<Vec<T>>(),
-            2,
-            &[0, 1, 2, 0, 2, 3],
-            vec![p1triangle],
-            &[0, 0],
-        );
+        let mut element_info = vec![];
+        let mut element_numbers = vec![];
+
+        for (cell, degree) in cell_types.iter().zip(cell_degrees) {
+            let info = (*cell, *degree);
+            if !element_info.contains(&info) {
+                element_info.push(info);
+            }
+            element_numbers.push(element_info.iter().position(|&i| i == info).unwrap());
+        }
+
+        let elements = element_info
+            .iter()
+            .map(|(i, j)| {
+                create_element(
+                    ElementFamily::Lagrange,
+                    match i {
+                        ReferenceCellType::Interval => {
+                            bempp_element::cell::ReferenceCellType::Interval
+                        }
+                        ReferenceCellType::Triangle => {
+                            bempp_element::cell::ReferenceCellType::Triangle
+                        }
+                        ReferenceCellType::Quadrilateral => {
+                            bempp_element::cell::ReferenceCellType::Quadrilateral
+                        }
+                        _ => {
+                            panic!("Unsupported cell type: {:?}", i);
+                        }
+                    },
+                    *j,
+                    Continuity::Continuous,
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let mut cell_vertices = vec![];
+
+        let mut start = 0;
+        for (cell_type, e_n) in cell_types.iter().zip(&element_numbers) {
+            let nvertices = reference_cell::entity_counts(*cell_type)[0];
+            let npoints = elements[*e_n].dim();
+            cell_vertices.extend_from_slice(&cells[start..start + nvertices]);
+            start += npoints;
+        }
+
+        // Create the topology
+        let topology = SerialTopology::new(&cell_vertices, cell_types);
+
+        // Create the geometry
+        let geometry = SerialGeometry::<T>::new(points, gdim, cells, elements, &element_numbers);
 
         Self { topology, geometry }
     }
