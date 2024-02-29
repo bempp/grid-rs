@@ -6,6 +6,7 @@ use crate::reference_cell::ReferenceCellType;
 
 use std::collections::HashMap;
 
+// TODO: use 2D rlst arrays here where possible
 type Connectivity = Vec<Vec<(ReferenceCellType, usize)>>;
 
 fn all_equal<T: Eq>(a: &[T], b: &[T]) -> bool {

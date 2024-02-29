@@ -9,6 +9,7 @@ use num::Float;
 pub struct SerialGeometry<T: Float> {
     dim: usize,
     index_map: Vec<usize>,
+    // TODO: change storage to rlst
     coordinates: Vec<T>,
     cells: Vec<Vec<usize>>,
     elements: Vec<CiarletElement>,
