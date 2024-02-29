@@ -165,7 +165,7 @@ where
 }
 
 pub struct ReferenceMap<'a, GridImpl: Grid> {
-    grid: &'a GridImpl,
+    _grid: &'a GridImpl,
 }
 
 impl<'a, GridImpl: Grid> ReferenceMapType for ReferenceMap<'a, GridImpl> {
@@ -183,15 +183,15 @@ impl<'a, GridImpl: Grid> ReferenceMapType for ReferenceMap<'a, GridImpl> {
         panic!();
     }
 
-    fn reference_to_physical(&self, point_index: usize, value: &mut [<Self::Grid as GridType>::T]) {
+    fn reference_to_physical(&self, _point_index: usize, _value: &mut [<Self::Grid as GridType>::T]) {
         panic!();
     }
 
-    fn jacobian(&self, _point_index: usize, value: &mut [<Self::Grid as GridType>::T]) {
+    fn jacobian(&self, _point_index: usize, _value: &mut [<Self::Grid as GridType>::T]) {
         panic!();
     }
 
-    fn normal(&self, _point_index: usize, value: &mut [<Self::Grid as GridType>::T]) {
+    fn normal(&self, _point_index: usize, _value: &mut [<Self::Grid as GridType>::T]) {
         panic!();
     }
 }
@@ -200,7 +200,7 @@ pub struct ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>, Gri
 where
     GridImpl: 'a,
 {
-    grid: &'a GridImpl,
+    _grid: &'a GridImpl,
     _iter: std::marker::PhantomData<Iter>,
 }
 
@@ -279,16 +279,16 @@ where
 
     fn reference_to_physical_map<'a>(
         &'a self,
-        reference_points: &'a [Self::T],
-        cell_index: usize,
+        _reference_points: &'a [Self::T],
+        _cell_index: usize,
     ) -> Self::ReferenceMap<'a> {
         panic!();
     }
 
     fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
         &'a self,
-        reference_points: &'a [Self::T],
-        iter: Iter,
+        _reference_points: &'a [Self::T],
+        _iter: Iter,
     ) -> Self::ReferenceMapIterator<'a, Iter>
     where
         Self: 'a,
@@ -296,15 +296,15 @@ where
         panic!();
     }
 
-    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair] {
+    fn point_to_cells(&self, _point_index: usize) -> &[CellLocalIndexPair] {
         panic!();
     }
 
-    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair] {
+    fn edge_to_cells(&self, _edge_index: usize) -> &[CellLocalIndexPair] {
         panic!();
     }
 
-    fn face_to_cells(&self, face_index: usize) -> &[CellLocalIndexPair] {
+    fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair] {
         panic!();
     }
 }
