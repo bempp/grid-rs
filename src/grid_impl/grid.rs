@@ -20,7 +20,7 @@ pub struct Cell<'a, T: Float, GridImpl: Grid> {
 }
 pub struct CellTopology<'a, GridImpl: Grid> {
     grid: &'a GridImpl,
-    index: usize,
+    index: <<GridImpl as Grid>::Topology as Topology>::IndexType,
 }
 pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
     grid: &'a GridImpl,
@@ -85,18 +85,19 @@ where
     GridImpl: 'grid,
 {
     type Grid = GridImpl;
-    type VertexIndexIter<'a> = Copied<std::slice::Iter<'a, usize>>
+    type IndexType = <<GridImpl as Grid>::Topology as Topology>::IndexType;
+    type VertexIndexIter<'a> = Copied<std::slice::Iter<'a, Self::IndexType>>
     where
         Self: 'a;
 
-    type EdgeIndexIter<'a> = Copied<std::slice::Iter<'a, usize>>
+    type EdgeIndexIter<'a> = Copied<std::slice::Iter<'a, Self::IndexType>>
     where
         Self: 'a;
 
     fn vertex_indices(&self) -> Self::VertexIndexIter<'_> {
         self.grid
             .topology()
-            .cell(self.index)
+            .connectivity(self.index, 0)
             .unwrap()
             .iter()
             .copied()
@@ -105,7 +106,7 @@ where
     fn edge_indices(&self) -> Self::EdgeIndexIter<'_> {
         self.grid
             .topology()
-            .cell(self.index)
+            .connectivity(self.index, 1)
             .unwrap()
             .iter()
             .copied()
@@ -253,6 +254,9 @@ mod test {
         }
 
         for cell in grid.iter_all_cells() {
+            println!("{:?}", cell.index());
+        }
+        for cell in grid.iter_all_cells() {
             for (local_index, (vertex_index, edge_index)) in cell
                 .topology()
                 .vertex_indices()
@@ -260,7 +264,7 @@ mod test {
                 .enumerate()
             {
                 println!(
-                    "Cell: {}, Vertex: {}, {}, Edge: {}, {}, Volume: {}",
+                    "Cell: {}, Vertex: {}, {:?}, Edge: {}, {:?}, Volume: {}",
                     cell.index(),
                     local_index,
                     vertex_index,

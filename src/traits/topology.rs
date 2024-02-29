@@ -4,11 +4,12 @@ use crate::traits::grid::GridType;
 
 pub trait TopologyType {
     type Grid: GridType;
-    type VertexIndexIter<'a>: std::iter::Iterator<Item = usize>
+    type IndexType: std::fmt::Debug + Eq + Copy;
+    type VertexIndexIter<'a>: std::iter::Iterator<Item = Self::IndexType>
     where
         Self: 'a;
 
-    type EdgeIndexIter<'a>: std::iter::Iterator<Item = usize>
+    type EdgeIndexIter<'a>: std::iter::Iterator<Item = Self::IndexType>
     where
         Self: 'a;
 

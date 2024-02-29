@@ -14,11 +14,13 @@ pub enum Ownership {
 ///
 /// This provides information about which mesh entities are connected to other mesh entities
 pub trait Topology {
+    type IndexType: std::fmt::Debug + Eq + Copy;
+
     /// The dimension of the topology (eg a triangle's dimension is 2, tetrahedron's dimension is 3)
     fn dim(&self) -> usize;
 
     /// Return the index map from the input cell numbers to the storage numbers
-    fn index_map(&self) -> &[usize];
+    fn index_map(&self) -> &[Self::IndexType];
 
     /// The number of entities of type `etype`
     fn entity_count(&self, etype: ReferenceCellType) -> usize;
@@ -27,31 +29,26 @@ pub trait Topology {
     fn entity_count_by_dim(&self, dim: usize) -> usize;
 
     /// The indices of the vertices of the cell with topological index `index`
-    fn cell(&self, index: usize) -> Option<&[usize]>;
+    fn cell(&self, index: Self::IndexType) -> Option<&[Self::IndexType]>;
 
     /// The cell type of the cell with topological index `index`
-    fn cell_type(&self, index: usize) -> Option<ReferenceCellType>;
+    fn cell_type(&self, index: Self::IndexType) -> Option<ReferenceCellType>;
 
     /// All entity types of the given dimension that are included in the grid
     fn entity_types(&self, dim: usize) -> &[ReferenceCellType];
 
     /// Get the indices of entities and types of entities that are connected to each cell of type `cell_type`
-    fn cell_entities(
-        &self,
-        cell_type: ReferenceCellType,
-        dim: usize,
-    ) -> Option<&[(ReferenceCellType, usize)]>;
+    fn cell_entities(&self, cell_type: ReferenceCellType, dim: usize)
+        -> Option<&[Self::IndexType]>;
 
     /// Get the indices and types of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
-    fn connectivity(
-        &self,
-        etype: ReferenceCellType,
-        index: usize,
-        dim: usize,
-    ) -> Option<&[(ReferenceCellType, usize)]>;
+    fn connectivity(&self, index: Self::IndexType, dim: usize) -> Option<&[Self::IndexType]>;
 
     /// Get the ownership of a mesh entity
-    fn entity_ownership(&self, dim: usize, index: usize) -> Ownership;
+    fn entity_ownership(&self, dim: usize, index: Self::IndexType) -> Ownership;
+
+    /// Extract a flat index from an IndexType
+    fn extract_index(&self, index: Self::IndexType) -> usize;
 }
 
 /// The geometry of a grid

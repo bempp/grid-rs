@@ -26,6 +26,7 @@ impl<'a, T: Float + Scalar> TriangleTopology<'a, T> {
 }
 
 impl<'a, T: Float + Scalar> TopologyType for TriangleTopology<'a, T> {
+    type IndexType = usize;
     type Grid = TriangleSurfaceGrid<T>;
 
     type VertexIndexIter<'iter> = Copied<std::slice::Iter<'iter, usize>> where Self: 'iter;
