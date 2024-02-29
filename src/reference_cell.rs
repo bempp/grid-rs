@@ -1,19 +1,7 @@
 //! Information about reference cells
 
+pub use crate::types::ReferenceCellType;
 use num::Float;
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-#[repr(u8)]
-pub enum ReferenceCellType {
-    Point = 0,
-    Interval = 1,
-    Triangle = 2,
-    Quadrilateral = 3,
-    Tetrahedron = 4,
-    Hexahedron = 5,
-    Prism = 6,
-    Pyramid = 7,
-}
 
 /// The topological dimension of the cell
 pub fn dim(cell: ReferenceCellType) -> usize {

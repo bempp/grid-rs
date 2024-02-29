@@ -2,9 +2,10 @@ use crate::grid_impl::traits::{Geometry, Grid, Topology};
 use crate::reference_cell::ReferenceCellType;
 use crate::traits::{
     cell::CellType, geometry::GeometryType, grid::GridType, point::PointType,
-    topology::TopologyType,
+    reference_map::ReferenceMapType, topology::TopologyType,
 };
 use crate::types::vertex_iterator::PointIterator;
+use crate::types::CellLocalIndexPair;
 use num::Float;
 use std::iter::Copied;
 
@@ -89,8 +90,10 @@ where
     type VertexIndexIter<'a> = Copied<std::slice::Iter<'a, Self::IndexType>>
     where
         Self: 'a;
-
-    type EdgeIndexIter<'a> = Copied<std::slice::Iter<'a, Self::IndexType>>
+    type EdgeIndexIter<'a> = Self::VertexIndexIter<'a>
+    where
+        Self: 'a;
+    type FaceIndexIter<'a> = Self::VertexIndexIter<'a>
     where
         Self: 'a;
 
@@ -110,6 +113,19 @@ where
             .unwrap()
             .iter()
             .copied()
+    }
+
+    fn face_indices(&self) -> Self::FaceIndexIter<'_> {
+        self.grid
+            .topology()
+            .connectivity(self.grid.topology().dim(), self.index, 2)
+            .unwrap()
+            .iter()
+            .copied()
+    }
+
+    fn cell_type(&self) -> ReferenceCellType {
+        self.grid.topology().cell_type(self.index).unwrap()
     }
 }
 
@@ -148,16 +164,108 @@ where
     }
 }
 
-impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
+struct ReferenceMap<'a, T: Float, GridImpl: Grid<T = T>> {
+    grid: &'a GridImpl,
+}
+
+impl<'grid, T: Float, GridImpl: Grid<T = T>> ReferenceMapType for ReferenceMap<'grid, T, GridImpl>
+where
+    GridImpl: 'grid,
+{
+    type Grid = GridImpl;
+
+    fn domain_dimension(&self) -> usize {
+        panic!();
+    }
+
+    fn physical_dimension(&self) -> usize {
+        panic!();
+    }
+
+    fn number_of_reference_points(&self) -> usize {
+        panic!();
+    }
+
+    fn reference_to_physical(&self, point_index: usize, value: &mut [T]) {
+        panic!();
+    }
+
+    fn jacobian(&self, _point_index: usize, value: &mut [T]) {
+        panic!();
+    }
+
+    fn normal(&self, _point_index: usize, value: &mut [T]) {
+        panic!();
+    }
+}
+
+pub struct ReferenceMapIterator<
+    'a,
+    T: Float,
+    GridImpl: Grid,
+    Iter: std::iter::Iterator<Item = usize>,
+> {
+    iter: Iter,
+    reference_points: &'a [T],
+    grid: &'a GridImpl,
+    _t: std::marker::PhantomData<T>,
+}
+
+impl<'grid, T: Float, GridImpl: Grid<T = T>, Iter: std::iter::Iterator<Item = usize>>
+    ReferenceMapIterator<'grid, T, GridImpl, Iter>
+where
+    GridImpl: 'grid,
+{
+    pub fn new(iter: Iter, reference_points: &'grid [T], grid: &'grid GridImpl) -> Self {
+        Self {
+            iter,
+            reference_points,
+            grid,
+        }
+    }
+}
+
+impl<'grid, T: Float, GridImpl: Grid<T = T>, Iter: std::iter::Iterator<Item = usize>> Iterator
+    for ReferenceMapIterator<'grid, T, GridImpl, Iter>
+where
+    GridImpl: 'grid,
+{
+    type Item = ReferenceMap<'grid, T, GridImpl>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(cell_index) = self.iter.next() {
+            Some(
+                self.grid
+                    .reference_to_physical_map(self.reference_points, cell_index),
+            )
+        } else {
+            None
+        }
+    }
+}
+
+impl<'grid, T: Float, GridImpl: Grid<T = T>> GridType for GridImpl
+where
+    GridImpl: 'grid,
+{
     type T = T;
+
+    type ReferenceMap<'a> = ReferenceMap<'a, T, GridImpl>
+    where
+        Self: 'a;
+
+    type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>> =
+        ReferenceMapIterator<'a, T, GridImpl, Iter>
+    where
+        Self: 'a,
+        Iter: 'a;
+
     //  PROPOSAL:
     //  Vertex = one of the corners of a cell
     //  Point = a point in the geometry
 
     type Point<'a> = Point<'a, T, GridImpl::Geometry> where Self: 'a;
     type Cell<'a> = Cell<'a, T, GridImpl> where Self: 'a;
-    type Edge = ();
-    type Face = ();
 
     fn number_of_points(&self) -> usize {
         self.geometry().point_count()
@@ -197,6 +305,37 @@ impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
             index,
             _t: std::marker::PhantomData,
         }
+    }
+
+    fn reference_to_physical_map<'a>(
+        &'a self,
+        reference_points: &'a [Self::T],
+        cell_index: usize,
+    ) -> Self::ReferenceMap<'a> {
+        panic!();
+    }
+
+    fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
+        &'a self,
+        reference_points: &'a [Self::T],
+        iter: Iter,
+    ) -> Self::ReferenceMapIterator<'a, Iter>
+    where
+        Self: 'a,
+    {
+        panic!();
+    }
+
+    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair] {
+        panic!();
+    }
+
+    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair] {
+        panic!();
+    }
+
+    fn face_to_cells(&self, face_index: usize) -> &[CellLocalIndexPair] {
+        panic!();
     }
 }
 
