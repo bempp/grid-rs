@@ -1,8 +1,6 @@
 //! Geometry of a physical cell
 
-use crate::types::Float;
-
-use super::{GridType, PointType};
+use super::GridType;
 
 pub trait GeometryType {
     type Grid: GridType;

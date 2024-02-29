@@ -1,6 +1,6 @@
 //! Definition of the Geometry
 
-use std::{iter::Copied, marker::PhantomData};
+use std::iter::Copied;
 
 use num::{Float, Zero};
 use rlst::rlst_static_array;
