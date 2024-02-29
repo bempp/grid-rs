@@ -1,12 +1,12 @@
 use crate::grid_impl::traits::{Geometry, Grid, Topology};
+use crate::reference_cell::ReferenceCellType;
 use crate::traits::{
-    cell::CellType, geometry::GeometryType, grid::GridType, topology::TopologyType,
-    point::PointType,
+    cell::CellType, geometry::GeometryType, grid::GridType, point::PointType,
+    topology::TopologyType,
 };
+use crate::types::vertex_iterator::PointIterator;
 use num::Float;
 use std::iter::Copied;
-use crate::types::vertex_iterator::PointIterator;
-use crate::reference_cell::ReferenceCellType;
 
 pub struct Point<'a, T: Float, G: Geometry> {
     geometry: &'a G,
@@ -270,5 +270,6 @@ mod test {
                 )
             }
         }
+        // assert_eq!(0, 1);
     }
 }
