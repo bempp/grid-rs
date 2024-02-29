@@ -6,17 +6,32 @@ use crate::types::cell_iterator::CellIterator;
 use crate::types::vertex_iterator::PointIterator;
 use crate::types::Float;
 
+use super::ReferenceMapType;
+
 pub trait GridType: std::marker::Sized {
     type T: Float;
+
+    type Edge;
+    type Face;
 
     type Point<'a>: PointType
     where
         Self: 'a;
-    type Edge;
-    type Face;
+
     type Cell<'a>: CellType
     where
         Self: 'a;
+
+    type ReferenceMap<'a>: ReferenceMapType
+    where
+        Self: 'a;
+
+    type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>>: std::iter::Iterator<
+        Item = Self::ReferenceMap<'a>,
+    >
+    where
+        Self: 'a,
+        Iter: 'a;
 
     fn number_of_vertices(&self) -> usize;
 
@@ -55,4 +70,18 @@ pub trait GridType: std::marker::Sized {
     fn iter_all_cells(&self) -> CellIterator<'_, Self, std::ops::Range<usize>> {
         self.iter_cells(0..self.number_of_cells())
     }
+
+    fn reference_to_physical_map<'a>(
+        &'a self,
+        reference_points: &'a [Self::T],
+        cell_index: usize,
+    ) -> Self::ReferenceMap<'a>;
+
+    fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
+        &'a self,
+        reference_points: &'a [Self::T],
+        iter: Iter,
+    ) -> Self::ReferenceMapIterator<'a, Iter>
+    where
+        Self: 'a;
 }
