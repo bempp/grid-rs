@@ -1,6 +1,6 @@
 //! Serial implementation of a grid
 
-use crate::grid_impl::mixed_grid::{geometry::SerialGeometry, topology::SerialTopology};
+use crate::grid_impl::mixed_grid::{geometry::SerialMixedGeometry, topology::SerialMixedTopology};
 use crate::grid_impl::traits::Grid;
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
@@ -10,8 +10,8 @@ use num::Float;
 
 /// A serial grid
 pub struct SerialMixedGrid<T: Float> {
-    topology: SerialTopology,
-    geometry: SerialGeometry<T>,
+    topology: SerialMixedTopology,
+    geometry: SerialMixedGeometry<T>,
 }
 
 impl<T: Float> SerialMixedGrid<T> {
@@ -38,6 +38,7 @@ impl<T: Float> SerialMixedGrid<T> {
             .map(|(i, j)| {
                 create_element(
                     ElementFamily::Lagrange,
+                    // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
                     match i {
                         ReferenceCellType::Interval => {
                             bempp_element::cell::ReferenceCellType::Interval
@@ -58,6 +59,11 @@ impl<T: Float> SerialMixedGrid<T> {
             })
             .collect::<Vec<_>>();
 
+        if elements.len() == 1 {
+            println!("Creating a mixed grid with only one element. Using a SerialSingleElementGrid would be faster.");
+            // TODO: make into a warning
+        }
+
         let mut cell_vertices = vec![];
 
         let mut start = 0;
@@ -69,10 +75,11 @@ impl<T: Float> SerialMixedGrid<T> {
         }
 
         // Create the topology
-        let topology = SerialTopology::new(&cell_vertices, cell_types);
+        let topology = SerialMixedTopology::new(&cell_vertices, cell_types);
 
         // Create the geometry
-        let geometry = SerialGeometry::<T>::new(points, gdim, cells, elements, &element_numbers);
+        let geometry =
+            SerialMixedGeometry::<T>::new(points, gdim, cells, elements, &element_numbers);
 
         Self { topology, geometry }
     }
@@ -83,10 +90,10 @@ impl<T: Float> Grid for SerialMixedGrid<T> {
     type T = T;
 
     /// The type that implements [Topology]
-    type Topology = SerialTopology;
+    type Topology = SerialMixedTopology;
 
     /// The type that implements [Geometry]
-    type Geometry = SerialGeometry<T>;
+    type Geometry = SerialMixedGeometry<T>;
 
     /// Get the grid topology (See [Topology])
     fn topology(&self) -> &Self::Topology {

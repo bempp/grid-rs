@@ -27,7 +27,7 @@ fn all_in<T: Eq>(a: &[T], b: &[T]) -> bool {
 }
 
 /// Topology of a serial grid
-pub struct SerialTopology {
+pub struct SerialMixedTopology {
     dim: usize,
     index_map: Vec<(ReferenceCellType, usize)>,
     cells: HashMap<ReferenceCellType, Vec<Vec<(ReferenceCellType, usize)>>>, // TODO: use 2D array
@@ -36,9 +36,9 @@ pub struct SerialTopology {
     entity_types: Vec<Vec<ReferenceCellType>>,
 }
 
-unsafe impl Sync for SerialTopology {}
+unsafe impl Sync for SerialMixedTopology {}
 
-impl SerialTopology {
+impl SerialMixedTopology {
     pub fn new(cells_input: &[usize], cell_types: &[ReferenceCellType]) -> Self {
         let mut index_map = vec![(ReferenceCellType::Point, 0); cell_types.len()];
         let mut vertices = vec![];
@@ -237,7 +237,7 @@ impl SerialTopology {
     }
 }
 
-impl Topology for SerialTopology {
+impl Topology for SerialMixedTopology {
     type IndexType = (ReferenceCellType, usize);
 
     fn dim(&self) -> usize {
@@ -290,14 +290,15 @@ impl Topology for SerialTopology {
 
     fn connectivity(
         &self,
+        _dim0: usize,
         index: (ReferenceCellType, usize),
-        dim: usize,
+        dim1: usize,
     ) -> Option<&[Self::IndexType]> {
         if self.connectivity.contains_key(&index.0)
-            && dim < self.connectivity[&index.0].len()
-            && index.1 < self.connectivity[&index.0][dim].len()
+            && dim1 < self.connectivity[&index.0].len()
+            && index.1 < self.connectivity[&index.0][dim1].len()
         {
-            Some(&self.connectivity[&index.0][dim][index.1])
+            Some(&self.connectivity[&index.0][dim1][index.1])
         } else {
             None
         }
@@ -321,8 +322,8 @@ impl Topology for SerialTopology {
 mod test {
     use crate::grid_impl::mixed_grid::topology::*;
 
-    fn example_topology() -> SerialTopology {
-        SerialTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2])
+    fn example_topology() -> SerialMixedTopology {
+        SerialMixedTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2])
     }
 
     #[test]
@@ -386,7 +387,9 @@ mod test {
         let t = example_topology();
 
         for (id, vertices) in [vec![0], vec![1], vec![2], vec![3]].iter().enumerate() {
-            let c = t.connectivity((ReferenceCellType::Point, id), 0).unwrap();
+            let c = t
+                .connectivity(0, (ReferenceCellType::Point, id), 0)
+                .unwrap();
             for (i, j) in c.iter().zip(vertices) {
                 assert_eq!(i.0, ReferenceCellType::Point);
                 assert_eq!(i.1, *j);
@@ -397,7 +400,9 @@ mod test {
             .iter()
             .enumerate()
         {
-            let c = t.connectivity((ReferenceCellType::Point, id), 1).unwrap();
+            let c = t
+                .connectivity(0, (ReferenceCellType::Point, id), 1)
+                .unwrap();
             for (i, j) in c.iter().zip(edges) {
                 assert_eq!(i.0, ReferenceCellType::Interval);
                 assert_eq!(i.1, *j);
@@ -408,7 +413,9 @@ mod test {
             .iter()
             .enumerate()
         {
-            let c = t.connectivity((ReferenceCellType::Point, id), 2).unwrap();
+            let c = t
+                .connectivity(0, (ReferenceCellType::Point, id), 2)
+                .unwrap();
             for (i, j) in c.iter().zip(faces) {
                 assert_eq!(i.0, ReferenceCellType::Triangle);
                 assert_eq!(i.1, *j);
@@ -424,7 +431,7 @@ mod test {
             .enumerate()
         {
             let c = t
-                .connectivity((ReferenceCellType::Interval, id), 0)
+                .connectivity(1, (ReferenceCellType::Interval, id), 0)
                 .unwrap();
             for (i, j) in c.iter().zip(vertices) {
                 assert_eq!(i.0, ReferenceCellType::Point);
@@ -437,7 +444,7 @@ mod test {
             .enumerate()
         {
             let c = t
-                .connectivity((ReferenceCellType::Interval, id), 1)
+                .connectivity(1, (ReferenceCellType::Interval, id), 1)
                 .unwrap();
             for (i, j) in c.iter().zip(edges) {
                 assert_eq!(i.0, ReferenceCellType::Interval);
@@ -450,7 +457,7 @@ mod test {
             .enumerate()
         {
             let c = t
-                .connectivity((ReferenceCellType::Interval, id), 2)
+                .connectivity(1, (ReferenceCellType::Interval, id), 2)
                 .unwrap();
             for (i, j) in c.iter().zip(faces) {
                 assert_eq!(i.0, ReferenceCellType::Triangle);
@@ -459,8 +466,8 @@ mod test {
         }
     }
 
-    fn example_topology_mixed() -> SerialTopology {
-        SerialTopology::new(
+    fn example_topology_mixed() -> SerialMixedTopology {
+        SerialMixedTopology::new(
             &[0, 1, 2, 3, 1, 4, 3],
             &[
                 ReferenceCellType::Quadrilateral,
@@ -552,7 +559,9 @@ mod test {
             .iter()
             .enumerate()
         {
-            let c = t.connectivity((ReferenceCellType::Point, id), 0).unwrap();
+            let c = t
+                .connectivity(0, (ReferenceCellType::Point, id), 0)
+                .unwrap();
             for (i, j) in c.iter().zip(vertices) {
                 assert_eq!(i.0, ReferenceCellType::Point);
                 assert_eq!(i.1, *j);
@@ -569,7 +578,9 @@ mod test {
         .iter()
         .enumerate()
         {
-            let c = t.connectivity((ReferenceCellType::Point, id), 1).unwrap();
+            let c = t
+                .connectivity(0, (ReferenceCellType::Point, id), 1)
+                .unwrap();
             for (i, j) in c.iter().zip(edges) {
                 assert_eq!(i.0, ReferenceCellType::Interval);
                 assert_eq!(i.1, *j);
@@ -592,7 +603,9 @@ mod test {
         .iter()
         .enumerate()
         {
-            let c = t.connectivity((ReferenceCellType::Point, id), 2).unwrap();
+            let c = t
+                .connectivity(0, (ReferenceCellType::Point, id), 2)
+                .unwrap();
             assert_eq!(c, faces);
         }
     }
@@ -612,7 +625,7 @@ mod test {
         .enumerate()
         {
             let c = t
-                .connectivity((ReferenceCellType::Interval, id), 0)
+                .connectivity(1, (ReferenceCellType::Interval, id), 0)
                 .unwrap();
             for (i, j) in c.iter().zip(vertices) {
                 assert_eq!(i.0, ReferenceCellType::Point);
@@ -625,7 +638,7 @@ mod test {
             .enumerate()
         {
             let c = t
-                .connectivity((ReferenceCellType::Interval, id), 1)
+                .connectivity(1, (ReferenceCellType::Interval, id), 1)
                 .unwrap();
             for (i, j) in c.iter().zip(edges) {
                 assert_eq!(i.0, ReferenceCellType::Interval);
@@ -648,20 +661,20 @@ mod test {
         .enumerate()
         {
             let c = t
-                .connectivity((ReferenceCellType::Interval, id), 2)
+                .connectivity(1, (ReferenceCellType::Interval, id), 2)
                 .unwrap();
             assert_eq!(c, faces);
         }
     }
 
-    fn cell_entities_vs_connectivity(t: &SerialTopology) {
+    fn cell_entities_vs_connectivity(t: &SerialMixedTopology) {
         for cell_type in t.entity_types(t.dim()) {
             for dim in 0..t.dim() + 1 {
                 let ce = t.cell_entities(*cell_type, dim).unwrap();
                 let n = reference_cell::entity_counts(*cell_type)[dim];
                 for i in 0..ce.len() / n {
                     // TODO: entity_count instead?
-                    let con = t.connectivity((*cell_type, i), dim).unwrap();
+                    let con = t.connectivity(t.dim(), (*cell_type, i), dim).unwrap();
                     assert_eq!(con, &ce[n * i..n * (i + 1)]);
                 }
             }

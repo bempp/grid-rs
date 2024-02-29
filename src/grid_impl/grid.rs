@@ -97,7 +97,7 @@ where
     fn vertex_indices(&self) -> Self::VertexIndexIter<'_> {
         self.grid
             .topology()
-            .connectivity(self.index, 0)
+            .connectivity(self.grid.topology().dim(), self.index, 0)
             .unwrap()
             .iter()
             .copied()
@@ -106,7 +106,7 @@ where
     fn edge_indices(&self) -> Self::EdgeIndexIter<'_> {
         self.grid
             .topology()
-            .connectivity(self.index, 1)
+            .connectivity(self.grid.topology().dim(), self.index, 1)
             .unwrap()
             .iter()
             .copied()
@@ -204,6 +204,7 @@ impl<T: Float, GridImpl: Grid<T = T>> GridType for GridImpl {
 mod test {
     use crate::grid_impl::grid::*;
     use crate::grid_impl::mixed_grid::SerialMixedGrid;
+    use crate::grid_impl::single_element_grid::SerialSingleElementGrid;
 
     #[test]
     fn test_grid_mixed_cell_type() {
@@ -245,6 +246,49 @@ mod test {
                 ReferenceCellType::Triangle,
             ],
             &[2, 1, 1],
+        );
+
+        let mut coords = vec![0.0; grid.geometry().dim()];
+        for vertex in grid.iter_all_points() {
+            vertex.coords(coords.as_mut_slice());
+            println!("{:#?}", coords);
+        }
+
+        for cell in grid.iter_all_cells() {
+            println!("{:?}", cell.index());
+        }
+        for cell in grid.iter_all_cells() {
+            for (local_index, (vertex_index, edge_index)) in cell
+                .topology()
+                .vertex_indices()
+                .zip(cell.topology().edge_indices())
+                .enumerate()
+            {
+                println!(
+                    "Cell: {}, Vertex: {}, {:?}, Edge: {}, {:?}, Volume: {}",
+                    cell.index(),
+                    local_index,
+                    vertex_index,
+                    local_index,
+                    edge_index,
+                    cell.geometry().volume(),
+                )
+            }
+        }
+        // assert_eq!(0, 1);
+    }
+
+    #[test]
+    fn test_grid_single_element() {
+        let grid = SerialSingleElementGrid::<f64>::new(
+            vec![
+                0.0, 0.0, 0.0, 0.5, 0.0, 0.2, 1.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.0, 1.0,
+                0.5, 0.0, 0.0, 1.0, 0.0, 0.5, 1.0, 0.0, 1.0, 1.0, 0.0,
+            ],
+            3,
+            &[0, 2, 6, 4, 3, 1, 2, 8, 6, 7, 4, 5],
+            ReferenceCellType::Triangle,
+            2,
         );
 
         let mut coords = vec![0.0; grid.geometry().dim()];

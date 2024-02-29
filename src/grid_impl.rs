@@ -2,6 +2,7 @@
 
 pub mod grid;
 pub mod mixed_grid;
+pub mod single_element_grid;
 pub mod traits;
 
 pub use crate::grid_impl::traits::Geometry;

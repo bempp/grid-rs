@@ -6,7 +6,7 @@ use bempp_traits::element::FiniteElement;
 use num::Float;
 
 /// Geometry of a serial grid
-pub struct SerialGeometry<T: Float> {
+pub struct SerialMixedGeometry<T: Float> {
     dim: usize,
     index_map: Vec<(usize, usize)>,
     // TODO: change storage to rlst
@@ -18,9 +18,9 @@ pub struct SerialGeometry<T: Float> {
     volumes: Vec<Vec<T>>,
 }
 
-unsafe impl<T: Float> Sync for SerialGeometry<T> {}
+unsafe impl<T: Float> Sync for SerialMixedGeometry<T> {}
 
-impl<T: Float> SerialGeometry<T> {
+impl<T: Float> SerialMixedGeometry<T> {
     pub fn new(
         coordinates: Vec<T>,
         dim: usize,
@@ -41,7 +41,7 @@ impl<T: Float> SerialGeometry<T> {
             for (cell_i, element_i) in cell_elements.iter().enumerate() {
                 let size = elements[*element_i].dim();
                 if *element_i == element_index {
-                    index_map[cell_i] = (element_index, e_cells.len());
+                    index_map[cell_i] = (element_index, e_cells.len() / size);
                     e_cells.extend_from_slice(&cells_input[start..start + size]);
                 }
                 start += size;
@@ -49,11 +49,11 @@ impl<T: Float> SerialGeometry<T> {
             cells.push(e_cells);
         }
 
-        for (element_index, _e) in elements.iter().enumerate() {
+        for (element_index, e) in elements.iter().enumerate() {
             let mut e_midpoints = vec![];
             let mut e_diameters = vec![];
             let mut e_volumes = vec![];
-            for _cell in &cells[element_index] {
+            for _cell in 0..cells[element_index].len() / e.dim() {
                 e_midpoints.push(vec![T::from(0.0).unwrap(); dim]); // TODO
                 e_diameters.push(T::from(0.0).unwrap()); // TODO
                 e_volumes.push(T::from(0.0).unwrap()); // TODO
@@ -62,8 +62,6 @@ impl<T: Float> SerialGeometry<T> {
             diameters.push(e_diameters);
             volumes.push(e_volumes);
         }
-
-        println!("{} {}", cells.len(), volumes.len());
 
         Self {
             dim,
@@ -78,7 +76,7 @@ impl<T: Float> SerialGeometry<T> {
     }
 }
 
-impl<T: Float> Geometry for SerialGeometry<T> {
+impl<T: Float> Geometry for SerialMixedGeometry<T> {
     type IndexType = (usize, usize);
     type T = T;
     type Element = CiarletElement;
@@ -169,14 +167,14 @@ mod test {
     use bempp_element::element::{create_element, ElementFamily};
     use bempp_traits::element::Continuity;
 
-    fn example_geometry() -> SerialGeometry<f64> {
+    fn example_geometry() -> SerialMixedGeometry<f64> {
         let p1triangle = create_element(
             ElementFamily::Lagrange,
             bempp_element::cell::ReferenceCellType::Triangle,
             1,
             Continuity::Continuous,
         );
-        SerialGeometry::new(
+        SerialMixedGeometry::new(
             vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0],
             2,
             &[0, 1, 2, 0, 2, 3],
@@ -211,7 +209,7 @@ mod test {
         }
     }
 
-    fn example_geometry_mixed() -> SerialGeometry<f64> {
+    fn example_geometry_mixed() -> SerialMixedGeometry<f64> {
         let p1triangle = create_element(
             ElementFamily::Lagrange,
             bempp_element::cell::ReferenceCellType::Triangle,
@@ -224,7 +222,7 @@ mod test {
             1,
             Continuity::Continuous,
         );
-        SerialGeometry::new(
+        SerialMixedGeometry::new(
             vec![0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 0.0],
             2,
             &[0, 1, 2, 3, 1, 4, 3],

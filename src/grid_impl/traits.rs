@@ -41,8 +41,13 @@ pub trait Topology {
     fn cell_entities(&self, cell_type: ReferenceCellType, dim: usize)
         -> Option<&[Self::IndexType]>;
 
-    /// Get the indices and types of entities of dimension `dim` that are connected to the entity of type `etype` with index `index`
-    fn connectivity(&self, index: Self::IndexType, dim: usize) -> Option<&[Self::IndexType]>;
+    /// Get the indices and types of entities of dimension `dim1` that are connected to the entity of dimension `dim0` with index `index`
+    fn connectivity(
+        &self,
+        dim0: usize,
+        index: Self::IndexType,
+        dim1: usize,
+    ) -> Option<&[Self::IndexType]>;
 
     /// Get the ownership of a mesh entity
     fn entity_ownership(&self, dim: usize, index: Self::IndexType) -> Ownership;
