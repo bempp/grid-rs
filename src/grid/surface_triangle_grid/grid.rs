@@ -108,7 +108,7 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
 impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
     type T = T;
 
-    type Vertex<'a> = TriangleVertex<'a, T> where Self: 'a;
+    type Point<'a> = TriangleVertex<'a, T> where Self: 'a;
     type Cell<'a> = TriangleCell<'a, T> where Self: 'a;
 
     type Edge = [usize; 2];
@@ -118,14 +118,19 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
     fn number_of_vertices(&self) -> usize {
         self.vertices.len()
     }
+
+    fn number_of_points(&self) -> usize {
+        self.vertices.len()
+    }
+
     fn number_of_cells(&self) -> usize {
         self.cells.len()
     }
 
-    fn vertex_index_from_id(&self, id: usize) -> usize {
+    fn point_index_from_id(&self, id: usize) -> usize {
         self.vertex_ids[&id]
     }
-    fn vertex_id_from_index(&self, index: usize) -> usize {
+    fn point_id_from_index(&self, index: usize) -> usize {
         self.ids_from_vertex_indices[index]
     }
 
@@ -136,9 +141,9 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
         self.ids_from_cell_indices[index]
     }
 
-    fn vertex_from_index(&self, index: usize) -> Self::Vertex<'_> {
+    fn point_from_index(&self, index: usize) -> Self::Point<'_> {
         TriangleVertex::new(
-            self.vertex_id_from_index(index),
+            self.point_id_from_index(index),
             index,
             &self.vertices[index],
         )
@@ -170,7 +175,7 @@ mod test {
         grid.finalize();
 
         let mut coords = [0.0; 3];
-        for vertex in grid.iter_all_vertices() {
+        for vertex in grid.iter_all_points() {
             vertex.coords(coords.as_mut_slice());
             println!("{:#?}", coords);
         }

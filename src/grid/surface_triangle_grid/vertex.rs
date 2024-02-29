@@ -17,7 +17,7 @@ impl<'a, T: Float + Scalar> TriangleVertex<'a, T> {
     }
 }
 
-impl<'a, T: Float + Scalar> VertexType for TriangleVertex<'a, T> {
+impl<'a, T: Float + Scalar> PointType for TriangleVertex<'a, T> {
     type T = T;
 
     fn coords(&self, data: &mut [Self::T]) {
