@@ -183,7 +183,11 @@ impl<'a, GridImpl: Grid> ReferenceMapType for ReferenceMap<'a, GridImpl> {
         panic!();
     }
 
-    fn reference_to_physical(&self, _point_index: usize, _value: &mut [<Self::Grid as GridType>::T]) {
+    fn reference_to_physical(
+        &self,
+        _point_index: usize,
+        _value: &mut [<Self::Grid as GridType>::T],
+    ) {
         panic!();
     }
 
