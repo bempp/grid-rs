@@ -4,15 +4,12 @@ use crate::traits::cell::CellType;
 use crate::traits::point::PointType;
 use crate::types::cell_iterator::CellIterator;
 use crate::types::vertex_iterator::PointIterator;
-use crate::types::Float;
+use crate::types::{CellLocalIndexPair, Float};
 
 use super::ReferenceMapType;
 
 pub trait GridType: std::marker::Sized {
     type T: Float;
-
-    type Edge;
-    type Face;
 
     type Point<'a>: PointType
     where
@@ -84,4 +81,10 @@ pub trait GridType: std::marker::Sized {
     ) -> Self::ReferenceMapIterator<'a, Iter>
     where
         Self: 'a;
+
+    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair];
+
+    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair];
+
+    fn face_to_cells(&self, face_index: usize) -> &[CellLocalIndexPair];
 }

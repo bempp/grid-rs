@@ -11,6 +11,8 @@ use crate::traits::*;
 
 use super::grid::TriangleSurfaceGrid;
 
+use crate::types::ReferenceCellType;
+
 pub struct TriangleTopology<'a, T: Float + Scalar> {
     cell: &'a TriangleCell<'a, T>,
     _marker: PhantomData<T>,
@@ -31,6 +33,8 @@ impl<'a, T: Float + Scalar> TopologyType for TriangleTopology<'a, T> {
     type VertexIndexIter<'iter> = Copied<std::slice::Iter<'iter, usize>> where Self: 'iter;
     type EdgeIndexIter<'iter> = Copied<std::slice::Iter<'iter, usize>> where Self: 'iter;
 
+    type FaceIndexIter<'iter> = Copied<std::slice::Iter<'iter, usize>> where Self: 'iter;
+
     fn vertex_indices(&self) -> Self::VertexIndexIter<'_> {
         self.cell.grid().cells[self.cell.index()].iter().copied()
     }
@@ -39,5 +43,13 @@ impl<'a, T: Float + Scalar> TopologyType for TriangleTopology<'a, T> {
         self.cell.grid().cell_to_edges[self.cell.index()]
             .iter()
             .copied()
+    }
+
+    fn face_indices(&self) -> Self::FaceIndexIter<'_> {
+        std::unimplemented!()
+    }
+
+    fn cell_type(&self) -> ReferenceCellType {
+        ReferenceCellType::Triangle
     }
 }
