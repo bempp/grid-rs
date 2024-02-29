@@ -3,11 +3,18 @@
 use std::collections::HashMap;
 
 use crate::types::Float;
+use rlst::rlst_static_array;
 use rlst_common::types::Scalar;
+use rlst_dense::rlst_array_from_slice1;
+use rlst_proc_macro::rlst_static_type;
 
 use crate::traits::*;
 
-use super::{cell::TriangleCell, vertex::TriangleVertex};
+use super::{
+    cell::TriangleCell,
+    reference_map::{TriangleReferenceMap, TriangleReferenceMapIterator},
+    vertex::TriangleVertex,
+};
 
 pub struct TriangleSurfaceGrid<T: Float + Scalar> {
     pub(crate) vertices: Vec<[T; 3]>,
@@ -18,6 +25,11 @@ pub struct TriangleSurfaceGrid<T: Float + Scalar> {
     cell_ids: HashMap<usize, usize>,
     edge_connectivity: HashMap<(usize, usize), (usize, Vec<usize>)>,
     pub(crate) cell_to_edges: Vec<[usize; 3]>,
+    pub(crate) jacobians: Vec<rlst_static_type!(T, 3, 2)>,
+    pub(crate) volumes: Vec<T>,
+    pub(crate) diameters: Vec<T>,
+    pub(crate) normals: Vec<rlst_static_type!(T, 3)>,
+    pub(crate) midpoints: Vec<rlst_static_type!(T, 3)>,
 }
 
 impl<T: Float + Scalar> Default for TriangleSurfaceGrid<T> {
@@ -37,6 +49,11 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
             cell_ids: HashMap::new(),
             edge_connectivity: HashMap::new(),
             cell_to_edges: Vec::new(),
+            jacobians: Vec::new(),
+            volumes: Vec::new(),
+            diameters: Vec::new(),
+            normals: Vec::new(),
+            midpoints: Vec::new(),
         }
     }
 
@@ -50,6 +67,11 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
             cell_ids: HashMap::new(),
             edge_connectivity: HashMap::new(),
             cell_to_edges: Vec::new(),
+            jacobians: Vec::with_capacity(ncells),
+            volumes: Vec::with_capacity(ncells),
+            diameters: Vec::with_capacity(ncells),
+            normals: Vec::with_capacity(ncells),
+            midpoints: Vec::with_capacity(ncells),
         }
     }
 
@@ -73,6 +95,7 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
 
     pub fn finalize(&mut self) {
         self.create_edges();
+        self.compute_geometry_information();
     }
 
     fn create_edges(&mut self) {
@@ -103,6 +126,55 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
             }
         }
     }
+
+    fn compute_geometry_information(&mut self) {
+        for vertex_indices in &self.cells {
+            let v0 = rlst_array_from_slice1!(T, self.vertices[vertex_indices[0]].as_slice(), [3]);
+            let v1 = rlst_array_from_slice1!(T, self.vertices[vertex_indices[1]].as_slice(), [3]);
+            let v2 = rlst_array_from_slice1!(T, self.vertices[vertex_indices[2]].as_slice(), [3]);
+
+            let mut a = rlst_static_array!(T, 3);
+            let mut b = rlst_static_array!(T, 3);
+            let mut c = rlst_static_array!(T, 3);
+            let mut cross = rlst_static_array!(T, 3);
+
+            let mut midpoint = rlst_static_array!(T, 3);
+
+            let mut jacobian = rlst_static_array!(T, 3, 2);
+
+            a.fill_from(v1.view() - v0.view());
+            b.fill_from(v2.view() - v0.view());
+            c.fill_from(v2.view() - v1.view());
+
+            jacobian.view_mut().slice(1, 0).fill_from(a.view());
+            jacobian.view_mut().slice(1, 1).fill_from(b.view());
+
+            let a_norm = a.view().norm_2();
+            let b_norm = b.view().norm_2();
+            let c_norm = c.view().norm_2();
+
+            midpoint.fill_from(
+                (v0.view() + v1.view() + v2.view()).scalar_mul(T::from_f64(1.0 / 3.0).unwrap()),
+            );
+
+            a.cross(b.view(), cross.view_mut());
+            let normal_length = cross.view().norm_2();
+            cross.scale_in_place(T::one() / num::cast(normal_length).unwrap());
+
+            let volume = num::cast::<f64, T::Real>(0.5).unwrap() * normal_length;
+
+            let s = num::cast::<f64, T::Real>(0.5).unwrap() * (a_norm + b_norm + c_norm);
+
+            let diameter = num::cast::<f64, T::Real>(2.0).unwrap()
+                * num::Float::sqrt(((s - a_norm) * (s - b_norm) * (s - c_norm)) / s);
+
+            self.jacobians.push(jacobian);
+            self.volumes.push(num::cast(volume).unwrap());
+            self.diameters.push(num::cast(diameter).unwrap());
+            self.normals.push(cross);
+            self.midpoints.push(midpoint);
+        }
+    }
 }
 
 impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
@@ -110,6 +182,15 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
 
     type Point<'a> = TriangleVertex<'a, T> where Self: 'a;
     type Cell<'a> = TriangleCell<'a, T> where Self: 'a;
+
+    type ReferenceMap<'a> = TriangleReferenceMap<'a, T>
+    where
+        Self: 'a;
+
+    type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>> = TriangleReferenceMapIterator<'a, Self, Iter>
+    where
+        Self: 'a,
+        Iter: 'a;
 
     type Edge = [usize; 2];
 
@@ -152,10 +233,35 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
     fn cell_from_index(&self, index: usize) -> Self::Cell<'_> {
         TriangleCell::new(index, self)
     }
+
+    fn reference_to_physical_map<'a>(
+        &'a self,
+        reference_points: &'a [Self::T],
+        cell_index: usize,
+    ) -> Self::ReferenceMap<'a> {
+        TriangleReferenceMap::new(reference_points, cell_index, self)
+    }
+
+    fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
+        &'a self,
+        reference_points: &'a [Self::T],
+        iter: Iter,
+    ) -> Self::ReferenceMapIterator<'a, Iter>
+    where
+        Self: 'a,
+    {
+        TriangleReferenceMapIterator::new(iter, reference_points, self)
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use rlst::rlst_dynamic_array2;
+    use rlst_dense::{
+        tools::PrettyPrint,
+        traits::{RawAccess, RawAccessMut},
+    };
+
     use crate::traits::*;
 
     use super::TriangleSurfaceGrid;
@@ -197,6 +303,26 @@ mod test {
                     cell.geometry().volume(),
                 )
             }
+        }
+
+        let mut reference_points = rlst_dynamic_array2!(f64, [2, 2]);
+
+        reference_points[[0, 0]] = 1.0 / 3.0;
+        reference_points[[1, 0]] = 1.0 / 3.0;
+        reference_points[[0, 1]] = 1.0;
+        reference_points[[1, 1]] = 0.0;
+
+        for map in
+            grid.iter_reference_to_physical_map(reference_points.data(), 0..grid.number_of_cells())
+        {
+            let mut points = rlst_dynamic_array2!(f64, [3, map.number_of_reference_points()]);
+            for point_index in 0..map.number_of_reference_points() {
+                map.reference_to_physical(
+                    point_index,
+                    points.view_mut().slice(1, point_index).data_mut(),
+                );
+            }
+            points.pretty_print();
         }
     }
 }
