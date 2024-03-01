@@ -4,16 +4,22 @@ use crate::grid_impl::traits::Geometry;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
-use rlst_dense::{rlst_dynamic_array4, traits::{Shape, RandomAccessByRef}, array::Array, base_array::BaseArray, data_container::VectorContainer};
 use rlst_common::types::Scalar;
+use rlst_dense::{
+    array::Array,
+    base_array::BaseArray,
+    data_container::VectorContainer,
+    rlst_dynamic_array4,
+    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
+};
 
 /// Geometry of a serial grid
 pub struct SerialSingleElementGeometry<T: Float + Scalar> {
     dim: usize,
     index_map: Vec<usize>,
     // TODO: change storage to rlst
-    coordinates: Vec<T>,
-    cells: Vec<usize>,
+    pub(crate) coordinates: Vec<T>,
+    pub(crate) cells: Vec<usize>,
     pub(crate) element: CiarletElement<T>,
     midpoints: Vec<Vec<T>>,
     diameters: Vec<T>,
@@ -137,32 +143,52 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
 
 pub struct GeometryEvaluatorSingleElement<'a, T: Float + Scalar> {
     geometry: &'a SerialSingleElementGeometry<T>,
-    table: Array<T, BaseArray<T, VectorContainer<T>, 4>, 4>
+    table: Array<T, BaseArray<T, VectorContainer<T>, 4>, 4>,
 }
 
-impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T>
-{
+impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
     fn new<Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
-        geometry: &'a SerialSingleElementGeometry<T>, points: &Points
+        geometry: &'a SerialSingleElementGeometry<T>,
+        points: &Points,
     ) -> Self {
-        let mut table = rlst_dynamic_array4!(T, geometry.element.tabulate_array_shape(1, points.shape()[0]));
+        let mut table = rlst_dynamic_array4!(
+            T,
+            geometry.element.tabulate_array_shape(1, points.shape()[0])
+        );
         geometry.element.tabulate(points, 1, &mut table);
-        Self {
-            geometry,
-            table,
-        }
+        Self { geometry, table }
     }
 
-    fn compute_point(&self, cell_index: usize, point_index: usize, mapped_point: &mut [T]) {
+    pub fn compute_point(&self, cell_index: usize, point_index: usize, mapped_point: &mut [T]) {
+        let gdim = self.geometry.dim();
+        let element_npts = self.geometry.element.dim();
+        assert_eq!(mapped_point.len(), gdim);
+
+        for component in mapped_point.iter_mut() {
+            *component = T::from(0.0).unwrap();
+        }
+        for (i, v) in self.geometry.cells[cell_index * element_npts..]
+            .iter()
+            .take(element_npts)
+            .enumerate()
+        {
+            let t = unsafe { *self.table.get_unchecked([0, point_index, i, 0]) };
+            for (component, g) in mapped_point
+                .iter_mut()
+                .zip(self.geometry.coordinates[*v * gdim..].iter().take(gdim))
+            {
+                *component += *g * t;
+            }
+        }
     }
 }
 
 impl<'a, T: Float + Scalar> SerialSingleElementGeometry<T> {
-    pub fn get_evaluator<Points: RandomAccessByRef<2, Item = T> + Shape<2>>(&self, points: &Points) -> GeometryEvaluatorSingleElement<T> {
-        GeometryEvaluatorSingleElement::<T>::new(
-            &self, 
-            points,
-        )
+    pub fn get_evaluator<Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
+        &self,
+        points: &Points,
+    ) -> GeometryEvaluatorSingleElement<T> {
+        GeometryEvaluatorSingleElement::<T>::new(&self, points)
     }
 }
 
@@ -224,6 +250,7 @@ mod test {
         *points.get_mut([0, 1]).unwrap() = 0.5;
         *points.get_mut([1, 0]).unwrap() = 0.6;
         *points.get_mut([1, 1]).unwrap() = 0.1;
+
         let evaluator = g.get_evaluator(&points);
         let mut mapped_point = vec![0.0; 2];
         for (cell_i, points) in [
@@ -235,9 +262,10 @@ mod test {
         {
             for (point_i, point) in points.iter().enumerate() {
                 evaluator.compute_point(cell_i, point_i, &mut mapped_point);
-                assert_eq!(mapped_point, *point);
+                for (i, j) in mapped_point.iter().zip(point) {
+                    assert_relative_eq!(*i, *j);
+                }
             }
         }
     }
-
 }
