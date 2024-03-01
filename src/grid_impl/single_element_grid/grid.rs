@@ -6,17 +6,18 @@ use crate::grid_impl::single_element_grid::{
 use crate::grid_impl::traits::Grid;
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
-use bempp_element::element::{create_element, ElementFamily};
+use bempp_element::element::{create_element, ElementFamily, Inverse};
 use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
+use rlst_common::types::Scalar;
 
 /// A serial grid
-pub struct SerialSingleElementGrid<T: Float> {
+pub struct SerialSingleElementGrid<T: Float + Scalar> {
     topology: SerialSingleElementTopology,
     geometry: SerialSingleElementGeometry<T>,
 }
 
-impl<T: Float> SerialSingleElementGrid<T> {
+impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
     pub fn new(
         points: Vec<T>,
         gdim: usize,
@@ -24,7 +25,7 @@ impl<T: Float> SerialSingleElementGrid<T> {
         cell_type: ReferenceCellType,
         cell_degree: usize,
     ) -> Self {
-        let element = create_element(
+        let element = create_element::<T>(
             ElementFamily::Lagrange,
             // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
             match cell_type {
@@ -62,7 +63,7 @@ impl<T: Float> SerialSingleElementGrid<T> {
 }
 
 /// A grid
-impl<T: Float> Grid for SerialSingleElementGrid<T> {
+impl<T: Float + Scalar + Inverse> Grid for SerialSingleElementGrid<T> {
     type T = T;
 
     /// The type that implements [Topology]

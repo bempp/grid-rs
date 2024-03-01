@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 approx = "0.5"
-bempp-traits = { git = "https://github.com/bempp/bempp-rs.git" }
-bempp-tools = { git = "https://github.com/bempp/bempp-rs.git" }
-bempp-element = { git = "https://github.com/bempp/bempp-rs.git" }
+bempp-traits = { git = "https://github.com/bempp/bempp-rs.git", branch="mscroggs/template-element" }
+bempp-tools = { git = "https://github.com/bempp/bempp-rs.git", branch="mscroggs/template-element" }
+bempp-element = { git = "https://github.com/bempp/bempp-rs.git", branch="mscroggs/template-element" }
 num = "0.4"
 rlst = { git = "https://github.com/linalg-rs/rlst.git" }
 rlst-dense = { git = "https://github.com/linalg-rs/rlst.git" }

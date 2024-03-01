@@ -4,28 +4,29 @@ use crate::grid_impl::traits::Geometry;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
+use rlst_common::types::Scalar;
 
 /// Geometry of a serial grid
-pub struct SerialMixedGeometry<T: Float> {
+pub struct SerialMixedGeometry<T: Float + Scalar> {
     dim: usize,
     index_map: Vec<(usize, usize)>,
     // TODO: change storage to rlst
     coordinates: Vec<T>,
     cells: Vec<Vec<usize>>,
-    elements: Vec<CiarletElement>,
+    elements: Vec<CiarletElement<T>>,
     midpoints: Vec<Vec<Vec<T>>>,
     diameters: Vec<Vec<T>>,
     volumes: Vec<Vec<T>>,
 }
 
-unsafe impl<T: Float> Sync for SerialMixedGeometry<T> {}
+unsafe impl<T: Float + Scalar> Sync for SerialMixedGeometry<T> {}
 
-impl<T: Float> SerialMixedGeometry<T> {
+impl<T: Float + Scalar> SerialMixedGeometry<T> {
     pub fn new(
         coordinates: Vec<T>,
         dim: usize,
         cells_input: &[usize],
-        elements: Vec<CiarletElement>,
+        elements: Vec<CiarletElement<T>>,
         cell_elements: &[usize],
     ) -> Self {
         let mut index_map = vec![(0, 0); cell_elements.len()];
@@ -76,10 +77,10 @@ impl<T: Float> SerialMixedGeometry<T> {
     }
 }
 
-impl<T: Float> Geometry for SerialMixedGeometry<T> {
+impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
     type IndexType = (usize, usize);
     type T = T;
-    type Element = CiarletElement;
+    type Element = CiarletElement<T>;
 
     fn dim(&self) -> usize {
         self.dim

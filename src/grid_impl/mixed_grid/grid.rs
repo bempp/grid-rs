@@ -4,17 +4,18 @@ use crate::grid_impl::mixed_grid::{geometry::SerialMixedGeometry, topology::Seri
 use crate::grid_impl::traits::Grid;
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
-use bempp_element::element::{create_element, ElementFamily};
+use bempp_element::element::{create_element, ElementFamily, Inverse};
 use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
+use rlst_common::types::Scalar;
 
 /// A serial grid
-pub struct SerialMixedGrid<T: Float> {
+pub struct SerialMixedGrid<T: Float + Scalar> {
     topology: SerialMixedTopology,
     geometry: SerialMixedGeometry<T>,
 }
 
-impl<T: Float> SerialMixedGrid<T> {
+impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
     pub fn new(
         points: Vec<T>,
         gdim: usize,
@@ -36,7 +37,7 @@ impl<T: Float> SerialMixedGrid<T> {
         let elements = element_info
             .iter()
             .map(|(i, j)| {
-                create_element(
+                create_element::<T>(
                     ElementFamily::Lagrange,
                     // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
                     match i {
@@ -86,7 +87,7 @@ impl<T: Float> SerialMixedGrid<T> {
 }
 
 /// A grid
-impl<T: Float> Grid for SerialMixedGrid<T> {
+impl<T: Float + Scalar + Inverse> Grid for SerialMixedGrid<T> {
     type T = T;
 
     /// The type that implements [Topology]
