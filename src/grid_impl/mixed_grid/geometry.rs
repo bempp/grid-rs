@@ -5,13 +5,18 @@ use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
 use rlst_common::types::Scalar;
+use rlst_dense::{
+    array::Array,
+    base_array::BaseArray,
+    data_container::VectorContainer,
+    traits::{RandomAccessByRef, Shape},
+};
 
 /// Geometry of a serial grid
 pub struct SerialMixedGeometry<T: Float + Scalar> {
     dim: usize,
     index_map: Vec<(usize, usize)>,
-    // TODO: change storage to rlst
-    coordinates: Vec<T>,
+    coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
     cells: Vec<Vec<usize>>,
     elements: Vec<CiarletElement<T>>,
     midpoints: Vec<Vec<Vec<T>>>,
@@ -23,12 +28,12 @@ unsafe impl<T: Float + Scalar> Sync for SerialMixedGeometry<T> {}
 
 impl<T: Float + Scalar> SerialMixedGeometry<T> {
     pub fn new(
-        coordinates: Vec<T>,
-        dim: usize,
+        coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells_input: &[usize],
         elements: Vec<CiarletElement<T>>,
         cell_elements: &[usize],
     ) -> Self {
+        let dim = coordinates.shape()[1];
         let mut index_map = vec![(0, 0); cell_elements.len()];
         let mut cells = vec![];
         let mut midpoints = vec![];
@@ -91,15 +96,11 @@ impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
     }
 
     fn coordinate(&self, point_index: usize, coord_index: usize) -> Option<&Self::T> {
-        if coord_index < self.dim && point_index * self.dim < self.coordinates.len() {
-            Some(&self.coordinates[point_index * self.dim + coord_index])
-        } else {
-            None
-        }
+        self.coordinates.get([point_index, coord_index])
     }
 
     fn point_count(&self) -> usize {
-        self.coordinates.len() / self.dim
+        self.coordinates.shape()[0]
     }
 
     fn cell_points(&self, index: (usize, usize)) -> Option<&[usize]> {
@@ -167,6 +168,7 @@ mod test {
     use approx::*;
     use bempp_element::element::{create_element, ElementFamily};
     use bempp_traits::element::Continuity;
+    use rlst_dense::{rlst_dynamic_array2, traits::RandomAccessMut};
 
     fn example_geometry() -> SerialMixedGeometry<f64> {
         let p1triangle = create_element(
@@ -175,12 +177,47 @@ mod test {
             1,
             Continuity::Continuous,
         );
+        let mut points = rlst_dynamic_array2!(f64, [4, 2]);
+        *points.get_mut([0, 0]).unwrap() = 0.0;
+        *points.get_mut([0, 1]).unwrap() = 0.0;
+        *points.get_mut([1, 0]).unwrap() = 1.0;
+        *points.get_mut([1, 1]).unwrap() = 0.0;
+        *points.get_mut([2, 0]).unwrap() = 1.0;
+        *points.get_mut([2, 1]).unwrap() = 1.0;
+        *points.get_mut([3, 0]).unwrap() = 0.0;
+        *points.get_mut([3, 1]).unwrap() = 1.0;
+        SerialMixedGeometry::new(points, &[0, 1, 2, 0, 2, 3], vec![p1triangle], &[0, 0])
+    }
+
+    fn example_geometry_mixed() -> SerialMixedGeometry<f64> {
+        let p1triangle = create_element(
+            ElementFamily::Lagrange,
+            bempp_element::cell::ReferenceCellType::Triangle,
+            1,
+            Continuity::Continuous,
+        );
+        let p1quad = create_element(
+            ElementFamily::Lagrange,
+            bempp_element::cell::ReferenceCellType::Quadrilateral,
+            1,
+            Continuity::Continuous,
+        );
+        let mut points = rlst_dynamic_array2!(f64, [5, 2]);
+        *points.get_mut([0, 0]).unwrap() = 0.0;
+        *points.get_mut([0, 1]).unwrap() = 0.0;
+        *points.get_mut([1, 0]).unwrap() = 1.0;
+        *points.get_mut([1, 1]).unwrap() = 0.0;
+        *points.get_mut([2, 0]).unwrap() = 0.0;
+        *points.get_mut([2, 1]).unwrap() = 1.0;
+        *points.get_mut([3, 0]).unwrap() = 1.0;
+        *points.get_mut([3, 1]).unwrap() = 1.0;
+        *points.get_mut([4, 0]).unwrap() = 2.0;
+        *points.get_mut([4, 1]).unwrap() = 0.0;
         SerialMixedGeometry::new(
-            vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0],
-            2,
-            &[0, 1, 2, 0, 2, 3],
-            vec![p1triangle],
-            &[0, 0],
+            points,
+            &[0, 1, 2, 3, 1, 4, 3],
+            vec![p1quad, p1triangle],
+            &[0, 1],
         )
     }
 
@@ -212,28 +249,6 @@ mod test {
                 }
             }
         }
-    }
-
-    fn example_geometry_mixed() -> SerialMixedGeometry<f64> {
-        let p1triangle = create_element(
-            ElementFamily::Lagrange,
-            bempp_element::cell::ReferenceCellType::Triangle,
-            1,
-            Continuity::Continuous,
-        );
-        let p1quad = create_element(
-            ElementFamily::Lagrange,
-            bempp_element::cell::ReferenceCellType::Quadrilateral,
-            1,
-            Continuity::Continuous,
-        );
-        SerialMixedGeometry::new(
-            vec![0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 0.0],
-            2,
-            &[0, 1, 2, 3, 1, 4, 3],
-            vec![p1quad, p1triangle],
-            &[0, 1],
-        )
     }
 
     #[test]

@@ -8,6 +8,7 @@ use bempp_element::element::{create_element, ElementFamily, Inverse};
 use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
 use rlst_common::types::Scalar;
+use rlst_dense::{array::Array, base_array::BaseArray, data_container::VectorContainer};
 
 /// A serial grid
 pub struct SerialMixedGrid<T: Float + Scalar> {
@@ -17,8 +18,7 @@ pub struct SerialMixedGrid<T: Float + Scalar> {
 
 impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
     pub fn new(
-        points: Vec<T>,
-        gdim: usize,
+        points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells: &[usize],
         cell_types: &[ReferenceCellType],
         cell_degrees: &[usize],
@@ -79,8 +79,7 @@ impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
         let topology = SerialMixedTopology::new(&cell_vertices, cell_types);
 
         // Create the geometry
-        let geometry =
-            SerialMixedGeometry::<T>::new(points, gdim, cells, elements, &element_numbers);
+        let geometry = SerialMixedGeometry::<T>::new(points, cells, elements, &element_numbers);
 
         Self { topology, geometry }
     }

@@ -322,37 +322,36 @@ mod test {
 
     #[test]
     fn test_grid_mixed_cell_type() {
+        let mut points = rlst_dynamic_array2!(f64, [9, 3]);
+        *points.get_mut([0, 0]).unwrap() = -1.0;
+        *points.get_mut([0, 1]).unwrap() = 0.0;
+        *points.get_mut([0, 2]).unwrap() = 0.0;
+        *points.get_mut([1, 0]).unwrap() = -0.5;
+        *points.get_mut([1, 1]).unwrap() = 0.0;
+        *points.get_mut([1, 2]).unwrap() = 0.2;
+        *points.get_mut([2, 0]).unwrap() = 0.0;
+        *points.get_mut([2, 1]).unwrap() = 0.0;
+        *points.get_mut([2, 2]).unwrap() = 0.0;
+        *points.get_mut([3, 0]).unwrap() = 1.0;
+        *points.get_mut([3, 1]).unwrap() = 0.0;
+        *points.get_mut([3, 2]).unwrap() = 0.0;
+        *points.get_mut([4, 0]).unwrap() = 2.0;
+        *points.get_mut([4, 1]).unwrap() = 0.0;
+        *points.get_mut([4, 2]).unwrap() = 0.0;
+        *points.get_mut([5, 0]).unwrap() = -std::f64::consts::FRAC_1_SQRT_2;
+        *points.get_mut([5, 1]).unwrap() = std::f64::consts::FRAC_1_SQRT_2;
+        *points.get_mut([5, 2]).unwrap() = 0.0;
+        *points.get_mut([6, 0]).unwrap() = 0.0;
+        *points.get_mut([6, 1]).unwrap() = 0.5;
+        *points.get_mut([6, 2]).unwrap() = 0.0;
+        *points.get_mut([7, 0]).unwrap() = 0.0;
+        *points.get_mut([7, 1]).unwrap() = 1.0;
+        *points.get_mut([7, 2]).unwrap() = 0.0;
+        *points.get_mut([8, 0]).unwrap() = 1.0;
+        *points.get_mut([8, 1]).unwrap() = 1.0;
+        *points.get_mut([8, 2]).unwrap() = 0.0;
         let grid = SerialMixedGrid::<f64>::new(
-            vec![
-                -1.0,
-                0.0,
-                0.0,
-                -0.5,
-                0.0,
-                0.2,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                0.0,
-                2.0,
-                0.0,
-                0.0,
-                -std::f64::consts::FRAC_1_SQRT_2,
-                std::f64::consts::FRAC_1_SQRT_2,
-                0.0,
-                0.0,
-                0.5,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                1.0,
-                1.0,
-                0.0,
-            ],
-            3,
+            points,
             &[0, 2, 7, 6, 5, 1, 2, 3, 7, 8, 3, 4, 8],
             &[
                 ReferenceCellType::Triangle,
