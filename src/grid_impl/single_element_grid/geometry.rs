@@ -17,8 +17,7 @@ use rlst_dense::{
 pub struct SerialSingleElementGeometry<T: Float + Scalar> {
     dim: usize,
     index_map: Vec<usize>,
-    // TODO: change storage to rlst
-    pub(crate) coordinates: Vec<T>,
+    pub(crate) coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
     pub(crate) cells: Vec<usize>,
     pub(crate) element: CiarletElement<T>,
     midpoints: Vec<Vec<T>>,
@@ -30,11 +29,11 @@ unsafe impl<T: Float + Scalar> Sync for SerialSingleElementGeometry<T> {}
 
 impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
     pub fn new(
-        coordinates: Vec<T>,
-        dim: usize,
+        coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells_input: &[usize],
         element: CiarletElement<T>,
     ) -> Self {
+        let dim = coordinates.shape()[1];
         let size = element.dim();
         let ncells = cells_input.len() / size;
 
@@ -79,15 +78,11 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
     }
 
     fn coordinate(&self, point_index: usize, coord_index: usize) -> Option<&Self::T> {
-        if coord_index < self.dim && point_index * self.dim < self.coordinates.len() {
-            Some(&self.coordinates[point_index * self.dim + coord_index])
-        } else {
-            None
-        }
+        self.coordinates.get([point_index, coord_index])
     }
 
     fn point_count(&self) -> usize {
-        self.coordinates.len() / self.dim
+        self.coordinates.shape()[0]
     }
 
     fn cell_points(&self, index: usize) -> Option<&[usize]> {
@@ -173,22 +168,19 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
             .enumerate()
         {
             let t = unsafe { *self.table.get_unchecked([0, point_index, i, 0]) };
-            for (component, g) in mapped_point
-                .iter_mut()
-                .zip(self.geometry.coordinates[*v * gdim..].iter().take(gdim))
-            {
-                *component += *g * t;
+            for (j, component) in mapped_point.iter_mut().enumerate() {
+                *component += unsafe { *self.geometry.coordinates.get_unchecked([*v, j]) } * t;
             }
         }
     }
 }
 
-impl<'a, T: Float + Scalar> SerialSingleElementGeometry<T> {
+impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
     pub fn get_evaluator<Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
         &self,
         points: &Points,
     ) -> GeometryEvaluatorSingleElement<T> {
-        GeometryEvaluatorSingleElement::<T>::new(&self, points)
+        GeometryEvaluatorSingleElement::<T>::new(self, points)
     }
 }
 
@@ -208,12 +200,16 @@ mod test {
             1,
             Continuity::Continuous,
         );
-        SerialSingleElementGeometry::new(
-            vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0],
-            2,
-            &[0, 1, 2, 0, 2, 3],
-            p1triangle,
-        )
+        let mut points = rlst_dynamic_array2!(f64, [4, 2]);
+        *points.get_mut([0, 0]).unwrap() = 0.0;
+        *points.get_mut([0, 1]).unwrap() = 0.0;
+        *points.get_mut([1, 0]).unwrap() = 1.0;
+        *points.get_mut([1, 1]).unwrap() = 0.0;
+        *points.get_mut([2, 0]).unwrap() = 1.0;
+        *points.get_mut([2, 1]).unwrap() = 1.0;
+        *points.get_mut([3, 0]).unwrap() = 0.0;
+        *points.get_mut([3, 1]).unwrap() = 1.0;
+        SerialSingleElementGeometry::new(points, &[0, 1, 2, 0, 2, 3], p1triangle)
     }
 
     #[test]

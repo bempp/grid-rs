@@ -10,6 +10,7 @@ use bempp_element::element::{create_element, ElementFamily, Inverse};
 use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
 use rlst_common::types::Scalar;
+use rlst_dense::{array::Array, base_array::BaseArray, data_container::VectorContainer};
 
 /// A serial grid
 pub struct SerialSingleElementGrid<T: Float + Scalar> {
@@ -19,8 +20,7 @@ pub struct SerialSingleElementGrid<T: Float + Scalar> {
 
 impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
     pub fn new(
-        points: Vec<T>,
-        gdim: usize,
+        points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells: &[usize],
         cell_type: ReferenceCellType,
         cell_degree: usize,
@@ -56,7 +56,7 @@ impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
         let topology = SerialSingleElementTopology::new(&cell_vertices, cell_type);
 
         // Create the geometry
-        let geometry = SerialSingleElementGeometry::<T>::new(points, gdim, cells, element);
+        let geometry = SerialSingleElementGeometry::<T>::new(points, cells, element);
 
         Self { topology, geometry }
     }
