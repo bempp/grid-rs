@@ -175,12 +175,12 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
         }
     }
 
-    pub fn compute_point(&self, cell_index: usize, point_index: usize, mapped_point: &mut [T]) {
+    pub fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [T]) {
         let gdim = self.geometry.dim();
         let element_npts = self.geometry.element.dim();
-        assert_eq!(mapped_point.len(), gdim);
+        assert_eq!(point.len(), gdim);
 
-        for component in mapped_point.iter_mut() {
+        for component in point.iter_mut() {
             *component = T::from(0.0).unwrap();
         }
         for (i, v) in self.geometry.cells[cell_index * element_npts..]
@@ -189,7 +189,7 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
             .enumerate()
         {
             let t = unsafe { *self.table.get_unchecked([0, point_index, i, 0]) };
-            for (j, component) in mapped_point.iter_mut().enumerate() {
+            for (j, component) in point.iter_mut().enumerate() {
                 *component += unsafe { *self.geometry.coordinates.get_unchecked([*v, j]) } * t;
             }
         }
@@ -218,6 +218,24 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
             }
         }
     }
+
+    pub fn compute_normal(&self, cell_index: usize, point_index: usize, normal: &mut [T]) {
+        let gdim = self.geometry.dim();
+        let tdim = self.tdim;
+        assert_eq!(tdim, 2); // TODO: remove this
+        assert_eq!(tdim, gdim - 1);
+        let mut jacobian = [T::from(0.0).unwrap(); 6];
+
+        self.compute_jacobian(cell_index, point_index, &mut jacobian[..]);
+
+        for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)] {
+            normal[i] = jacobian[j] * jacobian[3 + k] - jacobian[k] * jacobian[3 + j];
+        }
+        let size = Scalar::sqrt(normal.iter().map(|&x| Scalar::powi(x, 2)).sum::<T>());
+        for i in normal.iter_mut() {
+            *i /= size;
+        }
+    }
 }
 
 impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
@@ -240,7 +258,7 @@ mod test {
         traits::{RandomAccessMut, RawAccessMut},
     };
 
-    fn example_geometry() -> SerialSingleElementGeometry<f64> {
+    fn example_geometry_2d() -> SerialSingleElementGeometry<f64> {
         let p1triangle = create_element(
             ElementFamily::Lagrange,
             bempp_element::cell::ReferenceCellType::Triangle,
@@ -299,14 +317,14 @@ mod test {
 
     #[test]
     fn test_counts() {
-        let g = example_geometry();
+        let g = example_geometry_2d();
         assert_eq!(g.point_count(), 4);
         assert_eq!(g.cell_count(), 2);
     }
 
     #[test]
     fn test_cell_points() {
-        let g = example_geometry();
+        let g = example_geometry_2d();
         for (cell_i, points) in [
             vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![1.0, 1.0]],
             vec![vec![0.0, 0.0], vec![1.0, 1.0], vec![0.0, 1.0]],
@@ -327,14 +345,19 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_evaluator_2d() {
-        let g = example_geometry();
+    fn triangle_points() -> Array<f64, BaseArray<f64, VectorContainer<f64>, 2>, 2> {
         let mut points = rlst_dynamic_array2!(f64, [2, 2]);
         *points.get_mut([0, 0]).unwrap() = 0.2;
         *points.get_mut([0, 1]).unwrap() = 0.5;
         *points.get_mut([1, 0]).unwrap() = 0.6;
         *points.get_mut([1, 1]).unwrap() = 0.1;
+        points
+    }
+
+    #[test]
+    fn test_compute_point_2d() {
+        let g = example_geometry_2d();
+        let points = triangle_points();
 
         let evaluator = g.get_evaluator(&points);
         let mut mapped_point = vec![0.0; 2];
@@ -355,15 +378,11 @@ mod test {
     }
 
     #[test]
-    fn test_evaluator_3d() {
+    fn test_compute_point_3d() {
         let g = example_geometry_3d();
-        let mut points = rlst_dynamic_array2!(f64, [2, 2]);
-        *points.get_mut([0, 0]).unwrap() = 0.2;
-        *points.get_mut([0, 1]).unwrap() = 0.5;
-        *points.get_mut([1, 0]).unwrap() = 0.6;
-        *points.get_mut([1, 1]).unwrap() = 0.1;
-
+        let points = triangle_points();
         let evaluator = g.get_evaluator(&points);
+
         let mut mapped_point = vec![0.0; 3];
         for (cell_i, points) in [
             vec![vec![0.7, 0.5, 0.12], vec![0.7, 0.1, 0.36]],
@@ -379,6 +398,14 @@ mod test {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_compute_jacobian_3d() {
+        let g = example_geometry_3d();
+        let points = triangle_points();
+        let evaluator = g.get_evaluator(&points);
+
         let mut computed_jacobian = rlst_dynamic_array2!(f64, [3, 2]);
         for (cell_i, jacobians) in [
             vec![
@@ -406,22 +433,45 @@ mod test {
                 }
             }
         }
-        /*
-                let mut computed_normal = vec![0.0; 3];
-                for (cell_i, normals) in [
-                    vec![vec![0.7, 0.5, 0.12], vec![0.7, 0.1, 0.36]],
-                    vec![vec![0.0, 0.0, 1.0], vec![0.0, 0.0, 1.0]],
-                ]
-                .iter()
-                .enumerate()
-                {
-                    for (point_i, point) in points.iter().enumerate() {
-                        evaluator.compute_point(cell_i, point_i, &mut mapped_point);
-                        for (i, j) in mapped_point.iter().zip(point) {
-                            assert_relative_eq!(*i, *j);
-                        }
-                    }
+    }
+    #[test]
+    fn test_compute_normal_3d() {
+        let g = example_geometry_3d();
+        let points = triangle_points();
+        let evaluator = g.get_evaluator(&points);
+
+        let mut computed_normal = vec![0.0; 3];
+        for (cell_i, normals) in [
+            vec![
+                vec![
+                    -0.2 / f64::sqrt(1.4),
+                    0.6 / f64::sqrt(1.4),
+                    1.0 / f64::sqrt(1.4),
+                ],
+                vec![
+                    0.6 / f64::sqrt(1.72),
+                    0.6 / f64::sqrt(1.72),
+                    1.0 / f64::sqrt(1.72),
+                ],
+            ],
+            vec![vec![0.0, 0.0, 1.0], vec![0.0, 0.0, 1.0]],
+        ]
+        .iter()
+        .enumerate()
+        {
+            for (point_i, normal) in normals.iter().enumerate() {
+                evaluator.compute_normal(cell_i, point_i, &mut computed_normal);
+                assert_relative_eq!(
+                    computed_normal[0] * computed_normal[0]
+                        + computed_normal[1] * computed_normal[1]
+                        + computed_normal[2] * computed_normal[2],
+                    1.0,
+                    epsilon = 1e-12
+                );
+                for (i, j) in computed_normal.iter().zip(normal) {
+                    assert_relative_eq!(*i, *j, epsilon = 1e-12);
                 }
-        */
+            }
+        }
     }
 }
