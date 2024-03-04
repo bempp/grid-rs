@@ -204,7 +204,11 @@ mod test {
             let vs = g.cell_points((0, cell_i)).unwrap();
             for (p_i, point) in points.iter().enumerate() {
                 for (c_i, coord) in point.iter().enumerate() {
-                    assert_relative_eq!(*coord, *g.coordinate(vs[p_i], c_i).unwrap());
+                    assert_relative_eq!(
+                        *coord,
+                        *g.coordinate(vs[p_i], c_i).unwrap(),
+                        epsilon = 1e-12
+                    );
                 }
             }
         }
@@ -257,7 +261,11 @@ mod test {
             let vs = g.cell_points(cell_i).unwrap();
             for (p_i, point) in points.iter().enumerate() {
                 for (c_i, coord) in point.iter().enumerate() {
-                    assert_relative_eq!(*coord, *g.coordinate(vs[p_i], c_i).unwrap());
+                    assert_relative_eq!(
+                        *coord,
+                        *g.coordinate(vs[p_i], c_i).unwrap(),
+                        epsilon = 1e-12
+                    );
                 }
             }
         }

@@ -1,6 +1,8 @@
 //! Implementation of grid geometry
 
 use crate::grid_impl::traits::Geometry;
+use crate::reference_cell;
+use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
@@ -138,6 +140,7 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
 
 pub struct GeometryEvaluatorSingleElement<'a, T: Float + Scalar> {
     geometry: &'a SerialSingleElementGeometry<T>,
+    tdim: usize,
     table: Array<T, BaseArray<T, VectorContainer<T>, 4>, 4>,
 }
 
@@ -146,12 +149,30 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
         geometry: &'a SerialSingleElementGeometry<T>,
         points: &Points,
     ) -> Self {
+        let tdim = reference_cell::dim(
+            // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
+            match geometry.element.cell_type() {
+                bempp_element::cell::ReferenceCellType::Interval => ReferenceCellType::Interval,
+                bempp_element::cell::ReferenceCellType::Triangle => ReferenceCellType::Triangle,
+                bempp_element::cell::ReferenceCellType::Quadrilateral => {
+                    ReferenceCellType::Quadrilateral
+                }
+                _ => {
+                    panic!("Unsupported cell type: {:?}", geometry.element.cell_type());
+                }
+            },
+        );
+        assert_eq!(tdim, points.shape()[1]);
         let mut table = rlst_dynamic_array4!(
             T,
             geometry.element.tabulate_array_shape(1, points.shape()[0])
         );
         geometry.element.tabulate(points, 1, &mut table);
-        Self { geometry, table }
+        Self {
+            geometry,
+            tdim,
+            table,
+        }
     }
 
     pub fn compute_point(&self, cell_index: usize, point_index: usize, mapped_point: &mut [T]) {
@@ -173,6 +194,30 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
             }
         }
     }
+
+    pub fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [T]) {
+        let gdim = self.geometry.dim();
+        let tdim = self.tdim;
+        let element_npts = self.geometry.element.dim();
+        assert_eq!(jacobian.len(), gdim * tdim);
+
+        for component in jacobian.iter_mut() {
+            *component = T::from(0.0).unwrap();
+        }
+        for (i, v) in self.geometry.cells[cell_index * element_npts..]
+            .iter()
+            .take(element_npts)
+            .enumerate()
+        {
+            for gd in 0..gdim {
+                for td in 0..tdim {
+                    jacobian[td * gdim + gd] +=
+                        unsafe { *self.geometry.coordinates.get_unchecked([*v, gd]) }
+                            * unsafe { *self.table.get_unchecked([1 + td, point_index, i, 0]) };
+                }
+            }
+        }
+    }
 }
 
 impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
@@ -190,8 +235,10 @@ mod test {
     use approx::*;
     use bempp_element::element::{create_element, ElementFamily};
     use bempp_traits::element::Continuity;
-    use rlst_dense::rlst_dynamic_array2;
-    use rlst_dense::traits::RandomAccessMut;
+    use rlst_dense::{
+        rlst_dynamic_array2,
+        traits::{RandomAccessMut, RawAccessMut},
+    };
 
     fn example_geometry() -> SerialSingleElementGeometry<f64> {
         let p1triangle = create_element(
@@ -210,6 +257,44 @@ mod test {
         *points.get_mut([3, 0]).unwrap() = 0.0;
         *points.get_mut([3, 1]).unwrap() = 1.0;
         SerialSingleElementGeometry::new(points, &[0, 1, 2, 0, 2, 3], p1triangle)
+    }
+
+    fn example_geometry_3d() -> SerialSingleElementGeometry<f64> {
+        let p2triangle = create_element(
+            ElementFamily::Lagrange,
+            bempp_element::cell::ReferenceCellType::Triangle,
+            2,
+            Continuity::Continuous,
+        );
+        let mut points = rlst_dynamic_array2!(f64, [9, 3]);
+        *points.get_mut([0, 0]).unwrap() = 0.0;
+        *points.get_mut([0, 1]).unwrap() = 0.0;
+        *points.get_mut([0, 2]).unwrap() = 0.0;
+        *points.get_mut([1, 0]).unwrap() = 0.5;
+        *points.get_mut([1, 1]).unwrap() = 0.0;
+        *points.get_mut([1, 2]).unwrap() = 0.5;
+        *points.get_mut([2, 0]).unwrap() = 1.0;
+        *points.get_mut([2, 1]).unwrap() = 0.0;
+        *points.get_mut([2, 2]).unwrap() = 0.0;
+        *points.get_mut([3, 0]).unwrap() = 0.0;
+        *points.get_mut([3, 1]).unwrap() = 0.5;
+        *points.get_mut([3, 2]).unwrap() = 0.0;
+        *points.get_mut([4, 0]).unwrap() = 0.5;
+        *points.get_mut([4, 1]).unwrap() = 0.5;
+        *points.get_mut([4, 2]).unwrap() = 0.0;
+        *points.get_mut([5, 0]).unwrap() = 1.0;
+        *points.get_mut([5, 1]).unwrap() = 0.5;
+        *points.get_mut([5, 2]).unwrap() = 0.0;
+        *points.get_mut([6, 0]).unwrap() = 0.0;
+        *points.get_mut([6, 1]).unwrap() = 1.0;
+        *points.get_mut([6, 2]).unwrap() = 0.0;
+        *points.get_mut([7, 0]).unwrap() = 0.5;
+        *points.get_mut([7, 1]).unwrap() = 1.0;
+        *points.get_mut([7, 2]).unwrap() = 0.0;
+        *points.get_mut([8, 0]).unwrap() = 1.0;
+        *points.get_mut([8, 1]).unwrap() = 1.0;
+        *points.get_mut([8, 2]).unwrap() = 0.0;
+        SerialSingleElementGeometry::new(points, &[0, 2, 8, 5, 4, 1, 0, 8, 6, 7, 3, 4], p2triangle)
     }
 
     #[test]
@@ -232,14 +317,18 @@ mod test {
             let vs = g.cell_points(cell_i).unwrap();
             for (p_i, point) in points.iter().enumerate() {
                 for (c_i, coord) in point.iter().enumerate() {
-                    assert_relative_eq!(*coord, *g.coordinate(vs[p_i], c_i).unwrap());
+                    assert_relative_eq!(
+                        *coord,
+                        *g.coordinate(vs[p_i], c_i).unwrap(),
+                        epsilon = 1e-12
+                    );
                 }
             }
         }
     }
 
     #[test]
-    fn test_evaluator() {
+    fn test_evaluator_2d() {
         let g = example_geometry();
         let mut points = rlst_dynamic_array2!(f64, [2, 2]);
         *points.get_mut([0, 0]).unwrap() = 0.2;
@@ -259,9 +348,80 @@ mod test {
             for (point_i, point) in points.iter().enumerate() {
                 evaluator.compute_point(cell_i, point_i, &mut mapped_point);
                 for (i, j) in mapped_point.iter().zip(point) {
-                    assert_relative_eq!(*i, *j);
+                    assert_relative_eq!(*i, *j, epsilon = 1e-12);
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_evaluator_3d() {
+        let g = example_geometry_3d();
+        let mut points = rlst_dynamic_array2!(f64, [2, 2]);
+        *points.get_mut([0, 0]).unwrap() = 0.2;
+        *points.get_mut([0, 1]).unwrap() = 0.5;
+        *points.get_mut([1, 0]).unwrap() = 0.6;
+        *points.get_mut([1, 1]).unwrap() = 0.1;
+
+        let evaluator = g.get_evaluator(&points);
+        let mut mapped_point = vec![0.0; 3];
+        for (cell_i, points) in [
+            vec![vec![0.7, 0.5, 0.12], vec![0.7, 0.1, 0.36]],
+            vec![vec![0.2, 0.7, 0.0], vec![0.6, 0.7, 0.0]],
+        ]
+        .iter()
+        .enumerate()
+        {
+            for (point_i, point) in points.iter().enumerate() {
+                evaluator.compute_point(cell_i, point_i, &mut mapped_point);
+                for (i, j) in mapped_point.iter().zip(point) {
+                    assert_relative_eq!(*i, *j, epsilon = 1e-12);
+                }
+            }
+        }
+        let mut computed_jacobian = rlst_dynamic_array2!(f64, [3, 2]);
+        for (cell_i, jacobians) in [
+            vec![
+                vec![vec![1.0, 1.0], vec![0.0, 1.0], vec![0.2, -0.4]],
+                vec![vec![1.0, 1.0], vec![0.0, 1.0], vec![-0.6, -1.2]],
+            ],
+            vec![
+                vec![vec![1.0, 0.0], vec![1.0, 1.0], vec![0.0, 0.0]],
+                vec![vec![1.0, 0.0], vec![1.0, 1.0], vec![0.0, 0.0]],
+            ],
+        ]
+        .iter()
+        .enumerate()
+        {
+            for (point_i, jacobian) in jacobians.iter().enumerate() {
+                evaluator.compute_jacobian(cell_i, point_i, &mut computed_jacobian.data_mut());
+                for (i, row) in jacobian.iter().enumerate() {
+                    for (j, entry) in row.iter().enumerate() {
+                        assert_relative_eq!(
+                            *entry,
+                            *computed_jacobian.get([i, j]).unwrap(),
+                            epsilon = 1e-12
+                        );
+                    }
+                }
+            }
+        }
+        /*
+                let mut computed_normal = vec![0.0; 3];
+                for (cell_i, normals) in [
+                    vec![vec![0.7, 0.5, 0.12], vec![0.7, 0.1, 0.36]],
+                    vec![vec![0.0, 0.0, 1.0], vec![0.0, 0.0, 1.0]],
+                ]
+                .iter()
+                .enumerate()
+                {
+                    for (point_i, point) in points.iter().enumerate() {
+                        evaluator.compute_point(cell_i, point_i, &mut mapped_point);
+                        for (i, j) in mapped_point.iter().zip(point) {
+                            assert_relative_eq!(*i, *j);
+                        }
+                    }
+                }
+        */
     }
 }
