@@ -1,6 +1,6 @@
 //! Implementation of grid geometry
 
-use crate::grid_impl::traits::Geometry;
+use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
 use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
@@ -14,6 +14,7 @@ use rlst_dense::{
     rlst_dynamic_array4,
     traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
+use std::cell::RefCell;
 
 /// Geometry of a serial grid
 pub struct SerialSingleElementGeometry<T: Float + Scalar> {
@@ -66,10 +67,13 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
     }
 }
 
-impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
+impl<T: Float + Scalar> Geometry for
+SerialSingleElementGeometry<T>
+{
     type IndexType = usize;
     type T = T;
     type Element = CiarletElement<T>;
+    type Evaluator<'a> = GeometryEvaluatorSingleElement<'a, T> where Self: 'a;
 
     fn dim(&self) -> usize {
         self.dim
@@ -136,6 +140,13 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
     fn volume(&self, index: usize) -> Self::T {
         self.volumes[index]
     }
+
+    fn get_evaluator<'a, Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
+        &'a self,
+        points: &Points,
+    ) -> GeometryEvaluatorSingleElement<'a, T> {
+       GeometryEvaluatorSingleElement::<T>::new(self, points)
+    }
 }
 
 pub struct GeometryEvaluatorSingleElement<'a, T: Float + Scalar> {
@@ -174,8 +185,16 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
             table,
         }
     }
+}
 
-    pub fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [T]) {
+impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorSingleElement<'a, T> {
+    type T = T;
+
+    fn point_count(&self) -> usize {
+        self.table.shape()[1]
+    }
+
+    fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [T]) {
         let gdim = self.geometry.dim();
         let element_npts = self.geometry.element.dim();
         assert_eq!(point.len(), gdim);
@@ -195,7 +214,7 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
         }
     }
 
-    pub fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [T]) {
+    fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [T]) {
         let gdim = self.geometry.dim();
         let tdim = self.tdim;
         let element_npts = self.geometry.element.dim();
@@ -219,7 +238,7 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
         }
     }
 
-    pub fn compute_normal(&self, cell_index: usize, point_index: usize, normal: &mut [T]) {
+    fn compute_normal(&self, cell_index: usize, point_index: usize, normal: &mut [T]) {
         let gdim = self.geometry.dim();
         let tdim = self.tdim;
         assert_eq!(tdim, 2); // TODO: remove this
@@ -235,15 +254,6 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
         for i in normal.iter_mut() {
             *i /= size;
         }
-    }
-}
-
-impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
-    pub fn get_evaluator<Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
-        &self,
-        points: &Points,
-    ) -> GeometryEvaluatorSingleElement<T> {
-        GeometryEvaluatorSingleElement::<T>::new(self, points)
     }
 }
 

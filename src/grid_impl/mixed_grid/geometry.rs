@@ -1,6 +1,7 @@
 //! Implementation of grid geometry
 
-use crate::grid_impl::traits::Geometry;
+use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
+use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
@@ -9,7 +10,7 @@ use rlst_dense::{
     array::Array,
     base_array::BaseArray,
     data_container::VectorContainer,
-    traits::{RandomAccessByRef, Shape},
+    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
 
 /// Geometry of a serial grid
@@ -82,10 +83,13 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
     }
 }
 
-impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
+impl<T: Float + Scalar> Geometry for
+SerialMixedGeometry<T>
+{
     type IndexType = (usize, usize);
     type T = T;
     type Element = CiarletElement<T>;
+    type Evaluator<'a> = GeometryEvaluatorMixed<'a, T>;
 
     fn dim(&self) -> usize {
         self.dim
@@ -159,6 +163,48 @@ impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
     }
     fn volume(&self, index: (usize, usize)) -> Self::T {
         self.volumes[index.0][index.1]
+    }
+
+    fn get_evaluator<'a, Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
+        &'a self,
+        points: &Points,
+    ) -> Self::Evaluator<'a> {
+        panic!();
+    }
+}
+
+pub struct GeometryEvaluatorMixed<'a, T: Float + Scalar> {
+    geometry: &'a SerialMixedGeometry<T>,
+    tdim: usize,
+    table: Array<T, BaseArray<T, VectorContainer<T>, 4>, 4>,
+}
+
+impl<'a, T: Float + Scalar> GeometryEvaluatorMixed<'a, T> {
+    fn new<Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
+        geometry: &'a SerialMixedGeometry<T>,
+        points: &Points,
+    ) -> Self {
+        panic!();
+    }
+}
+
+impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorMixed<'a, T> {
+    type T = T;
+
+    fn point_count(&self) -> usize {
+        panic!();
+    }
+
+    fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [T]) {
+        panic!();
+    }
+
+    fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [T]) {
+        panic!();
+    }
+
+    fn compute_normal(&self, cell_index: usize, point_index: usize, normal: &mut [T]) {
+        panic!();
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::grid_impl::traits::{Geometry, Grid, Topology};
+use crate::grid_impl::traits::{Geometry, Grid, Topology, GeometryEvaluator};
 use crate::reference_cell::ReferenceCellType;
 use crate::traits::{
     cell::CellType, geometry::GeometryType, grid::GridType, point::PointType,
@@ -6,8 +6,10 @@ use crate::traits::{
 };
 use crate::types::vertex_iterator::PointIterator;
 use crate::types::CellLocalIndexPair;
-use num::Float;
 use std::iter::Copied;
+use num::Float;
+use rlst_common::types::Scalar;
+use rlst_dense::rlst_array_from_slice2;
 
 pub struct Point<'a, T: Float, G: Geometry> {
     geometry: &'a G,
@@ -45,7 +47,7 @@ impl<'a, T: Float, G: Geometry<T = T>> PointType for Point<'a, T, G> {
     }
 }
 
-impl<'grid, T: Float, GridImpl: Grid<T = T>> CellType for Cell<'grid, T, GridImpl>
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> CellType for Cell<'grid, T, GridImpl>
 where
     GridImpl: 'grid,
 {
@@ -81,7 +83,7 @@ where
     }
 }
 
-impl<'grid, GridImpl: Grid> TopologyType for CellTopology<'grid, GridImpl>
+impl<'grid, T:Float + Scalar, GridImpl: Grid<T=T>> TopologyType for CellTopology<'grid, GridImpl>
 where
     GridImpl: 'grid,
 {
@@ -129,7 +131,7 @@ where
     }
 }
 
-impl<'grid, T: Float, GridImpl: Grid<T = T>> GeometryType for CellGeometry<'grid, T, GridImpl>
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> GeometryType for CellGeometry<'grid, T, GridImpl>
 where
     GridImpl: 'grid,
 {
@@ -165,48 +167,54 @@ where
 }
 
 pub struct ReferenceMap<'a, GridImpl: Grid> {
-    _grid: &'a GridImpl,
+    grid: &'a GridImpl,
+    evaluator: <<GridImpl as Grid>::Geometry as Geometry>::Evaluator<'a>,
+    cell_index: usize,
 }
 
-impl<'a, GridImpl: Grid> ReferenceMapType for ReferenceMap<'a, GridImpl> {
+impl<'a, T: Float + Scalar, GridImpl: Grid<T=T>> ReferenceMapType for ReferenceMap<'a, GridImpl>
+{
     type Grid = GridImpl;
 
     fn domain_dimension(&self) -> usize {
-        panic!();
+        self.grid.topology().dim()
     }
 
     fn physical_dimension(&self) -> usize {
-        panic!();
+        self.grid.geometry().dim()
     }
 
     fn number_of_reference_points(&self) -> usize {
-        panic!();
+        self.evaluator.point_count()
     }
 
     fn reference_to_physical(
         &self,
-        _point_index: usize,
-        _value: &mut [<Self::Grid as GridType>::T],
+        point_index: usize,
+        value: &mut [<Self::Grid as GridType>::T],
     ) {
-        panic!();
+        self.evaluator.compute_point(self.cell_index, point_index, value);
     }
 
-    fn jacobian(&self, _point_index: usize, _value: &mut [<Self::Grid as GridType>::T]) {
-        panic!();
+    fn jacobian(&self, point_index: usize, value: &mut [T]) {
+        self.evaluator.compute_jacobian(self.cell_index, point_index, value);
     }
 
-    fn normal(&self, _point_index: usize, _value: &mut [<Self::Grid as GridType>::T]) {
-        panic!();
+    fn normal(&self, point_index: usize, value: &mut [T]) {
+        self.evaluator.compute_normal(self.cell_index, point_index, value);
     }
 }
 
 pub struct ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid>
 where
     GridImpl: 'a,
+    Self: 'a,
 {
-    _grid: &'a GridImpl,
-    _iter: std::marker::PhantomData<Iter>,
+    grid: &'a GridImpl,    
+    evaluator: <<GridImpl as Grid>::Geometry as Geometry>::Evaluator<'a>,
+    iter: Iter,
 }
+
 
 impl<'a, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid> Iterator
     for ReferenceMapIterator<'a, Iter, GridImpl>
@@ -214,11 +222,16 @@ impl<'a, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid> Iterator
     type Item = ReferenceMap<'a, GridImpl>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        panic!();
+        if let Some(cell_index) = self.iter.next() {
+            None
+//            Some(ReferenceMap{grid: self.grid, evaluator: self.evaluator, cell_index})
+        } else {
+            None
+        }
     }
 }
 
-impl<'grid, T: Float, GridImpl: Grid<T = T>> GridType for GridImpl
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> GridType for GridImpl
 where
     GridImpl: 'grid,
 {
@@ -233,10 +246,6 @@ where
     where
         Self: 'a,
         Iter: 'a;
-
-    //  PROPOSAL:
-    //  Vertex = one of the corners of a cell
-    //  Point = a point in the geometry
 
     type Point<'a> = Point<'a, T, GridImpl::Geometry> where Self: 'a;
     type Cell<'a> = Cell<'a, T, GridImpl> where Self: 'a;
@@ -283,21 +292,35 @@ where
 
     fn reference_to_physical_map<'a>(
         &'a self,
-        _reference_points: &'a [Self::T],
-        _cell_index: usize,
+        reference_points: &'a [Self::T],
+        cell_index: usize,
     ) -> Self::ReferenceMap<'a> {
-        panic!();
+        let gdim = self.geometry().dim();
+        let npts = reference_points.len() / gdim;
+        let rlst_reference_points = rlst_array_from_slice2!(T, reference_points, [npts, gdim], [gdim, 1]);
+        Self::ReferenceMap {
+            grid: self,
+            evaluator: self.geometry().get_evaluator(&rlst_reference_points),
+            cell_index,
+        }
     }
 
     fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
         &'a self,
-        _reference_points: &'a [Self::T],
-        _iter: Iter,
+        reference_points: &'a [Self::T],
+        iter: Iter,
     ) -> Self::ReferenceMapIterator<'a, Iter>
     where
         Self: 'a,
     {
-        panic!();
+        let gdim = self.geometry().dim();
+        let npts = reference_points.len() / gdim;
+        let rlst_reference_points = rlst_array_from_slice2!(T, reference_points, [npts, gdim], [gdim, 1]);
+        Self::ReferenceMapIterator {
+            grid: self,
+            evaluator: self.geometry().get_evaluator(&rlst_reference_points),
+            iter,
+        }
     }
 
     fn point_to_cells(&self, _point_index: usize) -> &[CellLocalIndexPair] {

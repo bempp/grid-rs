@@ -3,6 +3,7 @@
 use crate::reference_cell::ReferenceCellType;
 use bempp_traits::element::FiniteElement;
 use num::Float;
+use rlst_dense::traits::{RandomAccessByRef, Shape};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Ownership {
@@ -63,6 +64,7 @@ pub trait Geometry {
     type IndexType: std::fmt::Debug + Eq + Copy;
     type T: Float;
     type Element: FiniteElement;
+    type Evaluator<'a>: GeometryEvaluator<T=Self::T> where Self: 'a;
 
     /// The geometric dimension
     fn dim(&self) -> usize;
@@ -103,6 +105,31 @@ pub trait Geometry {
 
     /// Volume of a cell
     fn volume(&self, index: Self::IndexType) -> Self::T;
+
+    /// Get the geometry evaluator for the given points
+    fn get_evaluator<'a, Points: RandomAccessByRef<2, Item = Self::T> + Shape<2>>(
+        &'a self,
+        points: &Points,
+    ) -> Self::Evaluator<'a>;
+}
+
+/// Geometry evaluator
+///
+/// A geometry evaluator can compute points and jacobians on physical cells
+pub trait GeometryEvaluator {
+    type T: Float;
+
+    /// The number of points on the reference cell used by this evaluator
+    fn point_count(&self) -> usize;
+
+    /// Compute a point on a physical cell
+    fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [Self::T]);
+
+    /// Compute a jacobian on a physical cell
+    fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [Self::T]);
+
+    /// Compute a normal on a physical cell
+    fn compute_normal(&self, cell_index: usize, point_index: usize, normal: &mut [Self::T]);
 }
 
 /// A grid

@@ -107,7 +107,7 @@ impl<'a, Grid: GridType, Iter: std::iter::Iterator<Item = usize>> Iterator
         if let Some(cell_index) = self.iter.next() {
             Some(
                 self.grid
-                    .reference_to_physical_map(self.reference_points, cell_index),
+                   .reference_to_physical_map(self.reference_points, cell_index),
             )
         } else {
             None
