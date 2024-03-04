@@ -25,7 +25,7 @@ fn all_in<T: Eq>(a: &[T], b: &[T]) -> bool {
 pub struct SerialSingleElementTopology {
     dim: usize,
     index_map: Vec<usize>,
-    cells: Vec<Vec<usize>>, // TODO: use 2D array
+    cells: Vec<Vec<usize>>,
     connectivity: Vec<Vec<Vec<Vec<usize>>>>,
     cell_connectivity: Vec<Vec<Vec<usize>>>,
     entity_types: Vec<ReferenceCellType>,
@@ -383,22 +383,6 @@ mod test {
     #[test]
     fn test_cell_entities_vs_connectivity() {
         let t = example_topology();
-        for cell_type in t.entity_types(t.dim()) {
-            for dim in 0..t.dim() + 1 {
-                let ce = t.cell_entities(*cell_type, dim).unwrap();
-                let n = reference_cell::entity_counts(*cell_type)[dim];
-                for i in 0..ce.len() / n {
-                    // TODO: entity_count instead?
-                    println!("{cell_type:?} {dim} {i}");
-                    let con = t.connectivity(t.dim(), i, dim).unwrap();
-                    println!(
-                        "{cell_type:?} {dim} {i} -> {:?} {:?}",
-                        con,
-                        &ce[n * i..n * (i + 1)]
-                    );
-                }
-            }
-        }
         for cell_type in t.entity_types(t.dim()) {
             for dim in 0..t.dim() + 1 {
                 let ce = t.cell_entities(*cell_type, dim).unwrap();
