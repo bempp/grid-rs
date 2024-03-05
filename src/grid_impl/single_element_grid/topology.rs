@@ -164,7 +164,7 @@ impl Topology for SerialSingleElementTopology {
         &self.entity_types[dim..dim + 1]
     }
 
-    fn connectivity(&self, dim0: usize, index: usize, dim1: usize) -> Option<&[Self::IndexType]> {
+    fn connectivity(&self, _dim0: usize, _index: usize, _dim1: usize) -> Option<&[Self::IndexType]> {
         panic!();
     }
 
