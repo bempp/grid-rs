@@ -39,14 +39,12 @@ pub trait Topology {
     fn entity_types(&self, dim: usize) -> &[ReferenceCellType];
 
     /// Get the indices of entities of dimension `dim` that are connected to the cell with index `index`
-    fn cell_to_entities(&self, index: Self::IndexType, dim: usize)
-        -> Option<&[Self::IndexType]> {
+    fn cell_to_entities(&self, index: Self::IndexType, dim: usize) -> Option<&[Self::IndexType]> {
         self.connectivity(self.dim(), index, dim)
     }
 
     /// Get the indices of entities of cell that are connected to the entity with dimension `dim` and index `index`
-    fn entity_to_cells(&self, dim: usize, index: Self::IndexType)
-        -> Option<&[Self::IndexType]> {
+    fn entity_to_cells(&self, dim: usize, index: Self::IndexType) -> Option<&[Self::IndexType]> {
         self.connectivity(dim, index, self.dim())
     }
 

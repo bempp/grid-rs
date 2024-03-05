@@ -27,7 +27,6 @@ pub struct SerialSingleElementTopology {
     index_map: Vec<usize>,
     cells: Vec<Vec<usize>>,
     connectivity: Vec<Vec<Vec<Vec<usize>>>>,
-    cell_connectivity: Vec<Vec<Vec<usize>>>,
     entity_types: Vec<ReferenceCellType>,
 }
 
@@ -49,11 +48,9 @@ impl SerialSingleElementTopology {
             .collect::<Vec<_>>();
         let mut cells = vec![];
         let mut connectivity = vec![vec![vec![]; dim + 1]; dim + 1];
-        let mut cell_connectivity = vec![vec![]; dim + 1];
 
         // dim0 = dim, dim1 = 0
         let mut cty = vec![];
-        let mut cell_cty = vec![vec![]; dim + 1];
         let mut start = 0;
         for (cell_i, i) in index_map.iter_mut().enumerate() {
             let cell = &cells_input[start..start + size];
@@ -65,14 +62,12 @@ impl SerialSingleElementTopology {
                 }
                 row.push(vertices.iter().position(|&r| r == *v).unwrap());
             }
-            cell_cty[0].extend_from_slice(&row);
             cells.push(row.clone());
             cty.push(row);
 
             start += size;
         }
         connectivity[dim][0] = cty;
-        cell_connectivity[dim] = cell_cty;
         // dim1 == 0
         for dim0 in 0..dim {
             let mut cty: Vec<Vec<usize>> = vec![];
@@ -112,16 +107,9 @@ impl SerialSingleElementTopology {
             }
             c[dim0] = cty;
         }
-        // dim0 == dim1 == dim
-        let mut cty = vec![];
-        for i in 0..connectivity[dim][0].len() {
-            cty.push(i);
-        }
-        cell_connectivity[dim][dim] = cty;
         // dim0 == dim
         for dim1 in 1..dim {
             let mut cty = vec![];
-            let mut cell_cty = vec![];
             let entities0 = &connectivity[dim][0];
             let ref_conn = &reference_cell::connectivity(cell_type)[dim1];
 
@@ -138,10 +126,8 @@ impl SerialSingleElementTopology {
                         }
                     }
                 }
-                cell_cty.extend_from_slice(&row);
                 cty.push(row);
             }
-            cell_connectivity[dim][dim1] = cell_cty;
             connectivity[dim][dim1] = cty;
         }
         // dim1 < dim0
@@ -184,7 +170,6 @@ impl SerialSingleElementTopology {
             index_map,
             cells,
             connectivity,
-            cell_connectivity,
             entity_types,
         }
     }
@@ -228,16 +213,6 @@ impl Topology for SerialSingleElementTopology {
         &self.entity_types[dim..dim + 1]
     }
 
-    fn cell_entities(&self, cell_type: ReferenceCellType, dim: usize) -> Option<&[usize]> {
-        if self.entity_types.contains(&cell_type)
-            && dim < self.cell_connectivity[reference_cell::dim(cell_type)].len()
-        {
-            Some(&self.cell_connectivity[reference_cell::dim(cell_type)][dim])
-        } else {
-            None
-        }
-    }
-
     fn connectivity(&self, dim0: usize, index: usize, dim1: usize) -> Option<&[Self::IndexType]> {
         if dim0 < self.connectivity.len()
             && dim1 < self.connectivity[dim0].len()
@@ -278,42 +253,33 @@ mod test {
     #[test]
     fn test_cell_entities_points() {
         let t = example_topology();
-        let c = t.cell_entities(ReferenceCellType::Triangle, 0).unwrap();
-        assert_eq!(c.len(), 6);
-        // cell 0
-        assert_eq!(c[0], 0);
-        assert_eq!(c[1], 1);
-        assert_eq!(c[2], 2);
-        // cell 1
-        assert_eq!(c[3], 2);
-        assert_eq!(c[4], 1);
-        assert_eq!(c[5], 3);
+        for (i, vertices) in [[0, 1, 2], [2, 1, 3]].iter().enumerate() {
+            let c = t.cell_to_entities(i, 0).unwrap();
+            assert_eq!(c.len(), 3);
+            assert_eq!(c, vertices);
+        }
     }
 
     #[test]
     fn test_cell_entities_intervals() {
         let t = example_topology();
-        let c = t.cell_entities(ReferenceCellType::Triangle, 1).unwrap();
-        assert_eq!(c.len(), 6);
-        // cell 0
-        assert_eq!(c[0], 0);
-        assert_eq!(c[1], 1);
-        assert_eq!(c[2], 2);
-        // cell 1
-        assert_eq!(c[3], 3);
-        assert_eq!(c[4], 4);
-        assert_eq!(c[5], 0);
+        for (i, edges) in [[0, 1, 2], [3, 4, 0]].iter().enumerate() {
+            let c = t.cell_to_entities(i, 1).unwrap();
+            assert_eq!(c.len(), 3);
+            assert_eq!(c, edges);
+        }
     }
+
     #[test]
     fn test_cell_entities_triangles() {
         let t = example_topology();
-        let c = t.cell_entities(ReferenceCellType::Triangle, 2).unwrap();
-        assert_eq!(c.len(), 2);
-        // cell 0
-        assert_eq!(c[0], 0);
-        // cell 1
-        assert_eq!(c[1], 1);
+        for i in 0..2 {
+            let c = t.cell_to_entities(i, 2).unwrap();
+            assert_eq!(c.len(), 1);
+            assert_eq!(c[0], i);
+        }
     }
+
     #[test]
     fn test_vertex_connectivity() {
         let t = example_topology();
@@ -376,22 +342,6 @@ mod test {
             let c = t.connectivity(1, id, 2).unwrap();
             for (i, j) in c.iter().zip(faces) {
                 assert_eq!(*i, *j);
-            }
-        }
-    }
-
-    #[test]
-    fn test_cell_entities_vs_connectivity() {
-        let t = example_topology();
-        for cell_type in t.entity_types(t.dim()) {
-            for dim in 0..t.dim() + 1 {
-                let ce = t.cell_entities(*cell_type, dim).unwrap();
-                let n = reference_cell::entity_counts(*cell_type)[dim];
-                for i in 0..ce.len() / n {
-                    // TODO: entity_count instead?
-                    let con = t.connectivity(t.dim(), i, dim).unwrap();
-                    assert_eq!(con, &ce[n * i..n * (i + 1)]);
-                }
             }
         }
     }
