@@ -37,26 +37,7 @@ impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
         let elements = element_info
             .iter()
             .map(|(i, j)| {
-                create_element::<T>(
-                    ElementFamily::Lagrange,
-                    // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
-                    match i {
-                        ReferenceCellType::Interval => {
-                            bempp_element::cell::ReferenceCellType::Interval
-                        }
-                        ReferenceCellType::Triangle => {
-                            bempp_element::cell::ReferenceCellType::Triangle
-                        }
-                        ReferenceCellType::Quadrilateral => {
-                            bempp_element::cell::ReferenceCellType::Quadrilateral
-                        }
-                        _ => {
-                            panic!("Unsupported cell type: {:?}", i);
-                        }
-                    },
-                    *j,
-                    Continuity::Continuous,
-                )
+                create_element::<T>(ElementFamily::Lagrange, *i, *j, Continuity::Continuous)
             })
             .collect::<Vec<_>>();
 

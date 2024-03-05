@@ -179,17 +179,7 @@ where
             .cell_element(self.index)
             .unwrap()
             .cell_type();
-        let nvertices = reference_cell::entity_counts(match cell_type {
-            // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
-            bempp_element::cell::ReferenceCellType::Interval => ReferenceCellType::Interval,
-            bempp_element::cell::ReferenceCellType::Triangle => ReferenceCellType::Triangle,
-            bempp_element::cell::ReferenceCellType::Quadrilateral => {
-                ReferenceCellType::Quadrilateral
-            }
-            _ => {
-                panic!("Unsupported cell type: {:?}", cell_type);
-            }
-        })[0];
+        let nvertices = reference_cell::entity_counts(cell_type)[0];
         PointIterator::new(
             self.grid.geometry().cell_points(self.index).unwrap()[..nvertices]
                 .iter()

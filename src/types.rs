@@ -5,17 +5,7 @@ pub mod point_iterator;
 
 pub use num::Float;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub enum ReferenceCellType {
-    Point,
-    Interval,
-    Triangle,
-    Quadrilateral,
-    Tetrahedron,
-    Hexahedron,
-    Prism,
-    Pyramid,
-}
+pub use bempp_element::cell::ReferenceCellType;
 
 pub struct CellLocalIndexPair {
     pub cell: usize,

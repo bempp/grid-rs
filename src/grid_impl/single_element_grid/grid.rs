@@ -27,17 +27,7 @@ impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
     ) -> Self {
         let element = create_element::<T>(
             ElementFamily::Lagrange,
-            // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
-            match cell_type {
-                ReferenceCellType::Interval => bempp_element::cell::ReferenceCellType::Interval,
-                ReferenceCellType::Triangle => bempp_element::cell::ReferenceCellType::Triangle,
-                ReferenceCellType::Quadrilateral => {
-                    bempp_element::cell::ReferenceCellType::Quadrilateral
-                }
-                _ => {
-                    panic!("Unsupported cell type: {:?}", cell_type);
-                }
-            },
+            cell_type,
             cell_degree,
             Continuity::Continuous,
         );

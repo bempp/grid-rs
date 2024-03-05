@@ -3,7 +3,6 @@
 use crate::grid_impl::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
 use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
-use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
@@ -185,43 +184,11 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorMixed<'a, T> {
         geometry: &'a SerialMixedGeometry<T>,
         points: &Points,
     ) -> Self {
-        let tdim = reference_cell::dim(
-            // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
-            match geometry.elements[0].cell_type() {
-                bempp_element::cell::ReferenceCellType::Interval => ReferenceCellType::Interval,
-                bempp_element::cell::ReferenceCellType::Triangle => ReferenceCellType::Triangle,
-                bempp_element::cell::ReferenceCellType::Quadrilateral => {
-                    ReferenceCellType::Quadrilateral
-                }
-                _ => {
-                    panic!(
-                        "Unsupported cell type: {:?}",
-                        geometry.elements[0].cell_type()
-                    );
-                }
-            },
-        );
+        let tdim = reference_cell::dim(geometry.elements[0].cell_type());
         assert_eq!(tdim, points.shape()[1]);
         let mut tables = vec![];
         for e in &geometry.elements {
-            assert_eq!(
-                reference_cell::dim(
-                    // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
-                    match e.cell_type() {
-                        bempp_element::cell::ReferenceCellType::Interval =>
-                            ReferenceCellType::Interval,
-                        bempp_element::cell::ReferenceCellType::Triangle =>
-                            ReferenceCellType::Triangle,
-                        bempp_element::cell::ReferenceCellType::Quadrilateral => {
-                            ReferenceCellType::Quadrilateral
-                        }
-                        _ => {
-                            panic!("Unsupported cell type: {:?}", e.cell_type());
-                        }
-                    },
-                ),
-                tdim
-            );
+            assert_eq!(reference_cell::dim(e.cell_type()), tdim);
             let mut table = rlst_dynamic_array4!(T, e.tabulate_array_shape(1, points.shape()[0]));
             e.tabulate(points, 1, &mut table);
             tables.push(table);

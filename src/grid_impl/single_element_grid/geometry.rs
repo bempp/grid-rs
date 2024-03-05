@@ -3,7 +3,6 @@
 use crate::grid_impl::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
 use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
-use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
@@ -158,19 +157,7 @@ impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
         geometry: &'a SerialSingleElementGeometry<T>,
         points: &Points,
     ) -> Self {
-        let tdim = reference_cell::dim(
-            // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
-            match geometry.element.cell_type() {
-                bempp_element::cell::ReferenceCellType::Interval => ReferenceCellType::Interval,
-                bempp_element::cell::ReferenceCellType::Triangle => ReferenceCellType::Triangle,
-                bempp_element::cell::ReferenceCellType::Quadrilateral => {
-                    ReferenceCellType::Quadrilateral
-                }
-                _ => {
-                    panic!("Unsupported cell type: {:?}", geometry.element.cell_type());
-                }
-            },
-        );
+        let tdim = reference_cell::dim(geometry.element.cell_type());
         assert_eq!(tdim, points.shape()[1]);
         let mut table = rlst_dynamic_array4!(
             T,
