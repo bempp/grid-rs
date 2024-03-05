@@ -115,14 +115,6 @@ impl SerialSingleElementTopology {
             cells_to_entities[d] = c_to_e;
         }
 
-        println!("EV: {entities_to_vertices:?}");
-
-        for i in 0..3 {
-            println!("CE[{i}] {:?}", cells_to_entities[i]);
-        }
-        for i in 0..3 {
-            println!("EC[{i}] {:?}", entities_to_cells[i]);
-        }
         Self {
             dim,
             index_map,
@@ -272,9 +264,6 @@ mod test {
             })
             .collect::<Vec<_>>();
 
-        println!("{c_to_e:?}");
-        println!("{e_to_c:?}");
-
         for (i, cell) in c_to_e.iter().enumerate() {
             for v in *cell {
                 assert!(e_to_c[*v].contains(&i));
@@ -302,9 +291,6 @@ mod test {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-
-        println!("{c_to_e:?}");
-        println!("{e_to_c:?}");
 
         for (i, cell) in c_to_e.iter().enumerate() {
             for v in *cell {
