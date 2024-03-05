@@ -1,11 +1,13 @@
 use crate::grid_impl::traits::{Geometry, GeometryEvaluator, Grid, Topology};
+use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use crate::traits::{
     cell::CellType, geometry::GeometryType, grid::GridType, point::PointType,
     reference_map::ReferenceMapType, topology::TopologyType,
 };
-use crate::types::vertex_iterator::PointIterator;
+use crate::types::point_iterator::PointIterator;
 use crate::types::CellLocalIndexPair;
+use bempp_traits::element::FiniteElement;
 use num::Float;
 use rlst_common::types::Scalar;
 use rlst_dense::rlst_array_from_slice2;
@@ -160,10 +162,40 @@ where
     }
 
     fn points(&self) -> Self::PointIterator<'_> {
-        panic!();
+        PointIterator::new(
+            self.grid
+                .geometry()
+                .cell_points(self.index)
+                .unwrap()
+                .iter()
+                .copied(),
+            self.grid,
+        )
     }
     fn vertices(&self) -> Self::VertexIterator<'_> {
-        panic!();
+        let cell_type = self
+            .grid
+            .geometry()
+            .cell_element(self.index)
+            .unwrap()
+            .cell_type();
+        let nvertices = reference_cell::entity_counts(match cell_type {
+            // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
+            bempp_element::cell::ReferenceCellType::Interval => ReferenceCellType::Interval,
+            bempp_element::cell::ReferenceCellType::Triangle => ReferenceCellType::Triangle,
+            bempp_element::cell::ReferenceCellType::Quadrilateral => {
+                ReferenceCellType::Quadrilateral
+            }
+            _ => {
+                panic!("Unsupported cell type: {:?}", cell_type);
+            }
+        })[0];
+        PointIterator::new(
+            self.grid.geometry().cell_points(self.index).unwrap()[..nvertices]
+                .iter()
+                .copied(),
+            self.grid,
+        )
     }
 }
 

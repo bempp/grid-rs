@@ -3,7 +3,7 @@
 use crate::traits::cell::CellType;
 use crate::traits::point::PointType;
 use crate::types::cell_iterator::CellIterator;
-use crate::types::vertex_iterator::PointIterator;
+use crate::types::point_iterator::PointIterator;
 use crate::types::{CellLocalIndexPair, Float};
 
 use super::ReferenceMapType;

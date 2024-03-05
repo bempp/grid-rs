@@ -1,7 +1,7 @@
 //! Type definitions
 
 pub mod cell_iterator;
-pub mod vertex_iterator;
+pub mod point_iterator;
 
 pub use num::Float;
 
