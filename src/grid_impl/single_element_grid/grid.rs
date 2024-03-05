@@ -36,6 +36,7 @@ impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
 
         let mut start = 0;
         let nvertices = reference_cell::entity_counts(cell_type)[0];
+        println!("{nvertices}");
         let npoints = element.dim();
         while start < cells.len() {
             cell_vertices.extend_from_slice(&cells[start..start + nvertices]);

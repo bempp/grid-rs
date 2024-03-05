@@ -10,6 +10,7 @@ use super::ReferenceMapType;
 
 pub trait GridType: std::marker::Sized {
     type T: Float;
+    type IndexType: std::fmt::Debug + Eq + Copy;
 
     type Point<'a>: PointType
     where
@@ -66,9 +67,9 @@ pub trait GridType: std::marker::Sized {
         reference_points: &'a [Self::T],
     ) -> Self::ReferenceMap<'a>;
 
-    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair];
+    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair<Self::IndexType>];
 
-    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair];
+    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair<Self::IndexType>];
 
-    fn face_to_cells(&self, face_index: usize) -> &[CellLocalIndexPair];
+    fn face_to_cells(&self, face_index: usize) -> &[CellLocalIndexPair<Self::IndexType>];
 }

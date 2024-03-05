@@ -1,6 +1,7 @@
 //! Traits used in the implementation of a grid
 
 use crate::reference_cell::ReferenceCellType;
+use crate::types::CellLocalIndexPair;
 use bempp_traits::element::FiniteElement;
 use num::Float;
 use rlst_dense::traits::{RandomAccessByRef, Shape};
@@ -39,14 +40,17 @@ pub trait Topology {
     fn entity_types(&self, dim: usize) -> &[ReferenceCellType];
 
     /// Get the indices of entities of dimension `dim` that are connected to the cell with index `index`
-    fn cell_to_entities(&self, index: Self::IndexType, dim: usize) -> Option<&[Self::IndexType]> {
-        self.connectivity(self.dim(), index, dim)
-    }
+    fn cell_to_entities(&self, index: Self::IndexType, dim: usize) -> Option<&[Self::IndexType]>;
 
     /// Get the indices of entities of cell that are connected to the entity with dimension `dim` and index `index`
-    fn entity_to_cells(&self, dim: usize, index: Self::IndexType) -> Option<&[Self::IndexType]> {
-        self.connectivity(dim, index, self.dim())
-    }
+    fn entity_to_cells(
+        &self,
+        dim: usize,
+        index: Self::IndexType,
+    ) -> Option<&[CellLocalIndexPair<Self::IndexType>]>;
+
+    /// Get the indices of the vertices that are connect to theentity with dimension `dim` and index `index`
+    fn entity_vertices(&self, dim: usize, index: Self::IndexType) -> Option<&[Self::IndexType]>;
 
     /// Get the indices and types of entities of dimension `dim1` that are connected to the entity of dimension `dim0` with index `index`
     fn connectivity(
@@ -58,9 +62,6 @@ pub trait Topology {
 
     /// Get the ownership of a mesh entity
     fn entity_ownership(&self, dim: usize, index: Self::IndexType) -> Ownership;
-
-    /// Extract a flat index from an IndexType
-    fn extract_index(&self, index: Self::IndexType) -> usize;
 }
 
 /// The geometry of a grid

@@ -3,6 +3,7 @@
 use crate::grid_impl::traits::{Ownership, Topology};
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
+use crate::types::CellLocalIndexPair;
 
 use std::collections::HashMap;
 
@@ -277,13 +278,19 @@ impl Topology for SerialMixedTopology {
         Ownership::Owned
     }
 
-    fn extract_index(&self, index: Self::IndexType) -> usize {
-        let dim = reference_cell::dim(index.0);
-        if dim < 2 {
-            index.1
-        } else {
-            panic!();
-        }
+    fn entity_to_cells(
+        &self,
+        _dim: usize,
+        _index: Self::IndexType,
+    ) -> Option<&[CellLocalIndexPair<Self::IndexType>]> {
+        panic!();
+    }
+    fn cell_to_entities(&self, _index: Self::IndexType, _dim: usize) -> Option<&[Self::IndexType]> {
+        panic!();
+    }
+
+    fn entity_vertices(&self, _dim: usize, _index: Self::IndexType) -> Option<&[Self::IndexType]> {
+        panic!();
     }
 }
 

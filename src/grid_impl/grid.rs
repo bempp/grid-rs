@@ -104,7 +104,7 @@ where
     fn vertex_indices(&self) -> Self::VertexIndexIter<'_> {
         self.grid
             .topology()
-            .connectivity(self.grid.topology().dim(), self.index, 0)
+            .cell_to_entities(self.index, 0)
             .unwrap()
             .iter()
             .copied()
@@ -113,7 +113,7 @@ where
     fn edge_indices(&self) -> Self::EdgeIndexIter<'_> {
         self.grid
             .topology()
-            .connectivity(self.grid.topology().dim(), self.index, 1)
+            .cell_to_entities(self.index, 1)
             .unwrap()
             .iter()
             .copied()
@@ -122,7 +122,7 @@ where
     fn face_indices(&self) -> Self::FaceIndexIter<'_> {
         self.grid
             .topology()
-            .connectivity(self.grid.topology().dim(), self.index, 2)
+            .cell_to_entities(self.index, 2)
             .unwrap()
             .iter()
             .copied()
@@ -234,6 +234,7 @@ where
     GridImpl: 'grid,
 {
     type T = T;
+    type IndexType = <<GridImpl as Grid>::Topology as Topology>::IndexType;
 
     type ReferenceMap<'a> = ReferenceMap<'a, GridImpl>
     where
@@ -296,15 +297,15 @@ where
         }
     }
 
-    fn point_to_cells(&self, _point_index: usize) -> &[CellLocalIndexPair] {
+    fn point_to_cells(&self, _point_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
         panic!();
     }
 
-    fn edge_to_cells(&self, _edge_index: usize) -> &[CellLocalIndexPair] {
+    fn edge_to_cells(&self, _edge_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
         panic!();
     }
 
-    fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair] {
+    fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
         panic!();
     }
 }

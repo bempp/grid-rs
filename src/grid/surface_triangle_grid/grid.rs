@@ -19,8 +19,8 @@ pub struct TriangleSurfaceGrid<T: Float + Scalar> {
     ids_from_cell_indices: Vec<usize>,
     vertex_ids: HashMap<usize, usize>,
     cell_ids: HashMap<usize, usize>,
-    edge_to_cells: Vec<Vec<CellLocalIndexPair>>,
-    point_to_cells: Vec<Vec<CellLocalIndexPair>>,
+    edge_to_cells: Vec<Vec<CellLocalIndexPair<usize>>>,
+    point_to_cells: Vec<Vec<CellLocalIndexPair<usize>>>,
     pub(crate) cell_to_edges: Vec<[usize; 3]>,
     pub(crate) jacobians: Vec<rlst_static_type!(T, 3, 2)>,
     pub(crate) volumes: Vec<T>,
@@ -104,7 +104,7 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
             .resize_with(self.cells.len(), Default::default);
         let edge_local: [(usize, usize); 3] = [(1, 2), (0, 2), (0, 1)];
         let mut edge_connectivity =
-            HashMap::<(usize, usize), (usize, Vec<CellLocalIndexPair>)>::new();
+            HashMap::<(usize, usize), (usize, Vec<CellLocalIndexPair<usize>>)>::new();
         for (cell_index, cell_vertices) in self.cells.iter().enumerate() {
             for (local_index, &(first, second)) in edge_local.iter().enumerate() {
                 let mut first = cell_vertices[first];
@@ -115,11 +115,11 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
                 if let Some((edge_index, adjacent_cells)) =
                     edge_connectivity.get_mut(&(first, second))
                 {
-                    adjacent_cells.push(CellLocalIndexPair::new(cell_index, local_index));
+                    adjacent_cells.push(CellLocalIndexPair::<usize>::new(cell_index, local_index));
                     self.cell_to_edges[cell_index][local_index] = *edge_index;
                 } else {
-                    let mut adjacent_cells = Vec::<CellLocalIndexPair>::with_capacity(2);
-                    adjacent_cells.push(CellLocalIndexPair::new(cell_index, local_index));
+                    let mut adjacent_cells = Vec::<CellLocalIndexPair<usize>>::with_capacity(2);
+                    adjacent_cells.push(CellLocalIndexPair::<usize>::new(cell_index, local_index));
                     self.cell_to_edges[cell_index][local_index] = nedges;
                     edge_connectivity.insert((first, second), (nedges, adjacent_cells));
                     nedges += 1;
@@ -139,7 +139,7 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
         for (cell_index, cell) in self.cells.iter().enumerate() {
             for (local_index, &vertex_index) in cell.iter().enumerate() {
                 self.point_to_cells[vertex_index]
-                    .push(CellLocalIndexPair::new(cell_index, local_index));
+                    .push(CellLocalIndexPair::<usize>::new(cell_index, local_index));
             }
         }
     }
@@ -196,7 +196,7 @@ impl<T: Float + Scalar> TriangleSurfaceGrid<T> {
 
 impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
     type T = T;
-
+    type IndexType = usize;
     type Point<'a> = TriangleVertex<'a, T> where Self: 'a;
     type Cell<'a> = TriangleCell<'a, T> where Self: 'a;
 
@@ -249,15 +249,15 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
         TriangleReferenceMap::new(reference_points, self)
     }
 
-    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair] {
+    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair<usize>] {
         self.edge_to_cells[edge_index].as_slice()
     }
 
-    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair] {
+    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair<usize>] {
         self.point_to_cells[point_index].as_slice()
     }
 
-    fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair] {
+    fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair<usize>] {
         std::unimplemented!()
     }
 }
