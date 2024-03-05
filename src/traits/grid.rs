@@ -22,16 +22,6 @@ pub trait GridType: std::marker::Sized {
     type ReferenceMap<'a>: ReferenceMapType
     where
         Self: 'a;
-    type ReferenceMapInIter<'a>: ReferenceMapType
-    where
-        Self: 'a;
-
-    type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>>: std::iter::Iterator<
-        Item = Self::ReferenceMapInIter<'a>,
-    >
-    where
-        Self: 'a,
-        Iter: 'a;
 
     fn number_of_vertices(&self) -> usize;
 
@@ -74,16 +64,7 @@ pub trait GridType: std::marker::Sized {
     fn reference_to_physical_map<'a>(
         &'a self,
         reference_points: &'a [Self::T],
-        cell_index: usize,
     ) -> Self::ReferenceMap<'a>;
-
-    fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
-        &'a self,
-        reference_points: &'a [Self::T],
-        iter: Iter,
-    ) -> Self::ReferenceMapIterator<'a, Iter>
-    where
-        Self: 'a;
 
     fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair];
 

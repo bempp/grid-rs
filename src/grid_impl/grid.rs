@@ -1,4 +1,3 @@
-use crate::grid_impl::common::compute_point;
 use crate::grid_impl::traits::{Geometry, Grid, Topology, GeometryEvaluator};
 use crate::reference_cell::ReferenceCellType;
 use crate::traits::{
@@ -10,8 +9,7 @@ use crate::types::CellLocalIndexPair;
 use std::iter::Copied;
 use num::Float;
 use rlst_common::types::Scalar;
-use rlst_dense::{rlst_array_from_slice4, rlst_array_from_slice2, traits::{UnsafeRandomAccessByValue, Shape, UnsafeRandomAccessByRef, RawAccess}, array::Array, base_array::BaseArray, data_container::SliceContainer,
-array::views::ArrayView};
+use rlst_dense::rlst_array_from_slice2;
 
 pub struct Point<'a, T: Float, G: Geometry> {
     geometry: &'a G,
@@ -171,7 +169,6 @@ where
 pub struct ReferenceMap<'a, GridImpl: Grid> {
     grid: &'a GridImpl,
     evaluator: <<GridImpl as Grid>::Geometry as Geometry>::Evaluator<'a>,
-    cell_index: usize,
 }
 
 impl<'a, T: Float + Scalar, GridImpl: Grid<T=T>> ReferenceMapType for ReferenceMap<'a, GridImpl>
@@ -192,85 +189,19 @@ impl<'a, T: Float + Scalar, GridImpl: Grid<T=T>> ReferenceMapType for ReferenceM
 
     fn reference_to_physical(
         &self,
+        cell_index: usize,
         point_index: usize,
         value: &mut [<Self::Grid as GridType>::T],
     ) {
-        self.evaluator.compute_point(self.cell_index, point_index, value);
+        self.evaluator.compute_point(cell_index, point_index, value);
     }
 
-    fn jacobian(&self, point_index: usize, value: &mut [T]) {
-        self.evaluator.compute_jacobian(self.cell_index, point_index, value);
+    fn jacobian(&self, cell_index: usize, point_index: usize, value: &mut [T]) {
+        self.evaluator.compute_jacobian(cell_index, point_index, value);
     }
 
-    fn normal(&self, point_index: usize, value: &mut [T]) {
-        self.evaluator.compute_normal(self.cell_index, point_index, value);
-    }
-}
-
-pub struct ReferenceMapInIter<'a, T: Float + Scalar, GridImpl: Grid<T=T>, ArrayImpl: UnsafeRandomAccessByValue<4, Item = T> + Shape<4> + UnsafeRandomAccessByRef<4, Item=T>> {
-    grid: &'a GridImpl,
-    table: Array<T, ArrayImpl, 4>,
-    cell_index: usize,
-}
-
-impl<'a, T: Float + Scalar, GridImpl: Grid<T=T>, ArrayImpl: UnsafeRandomAccessByValue<4, Item = T> + Shape<4> + UnsafeRandomAccessByRef<4, Item=T>> ReferenceMapType for ReferenceMapInIter<'a, T, GridImpl, ArrayImpl>
-{
-    type Grid = GridImpl;
-
-    fn domain_dimension(&self) -> usize {
-        self.grid.topology().dim()
-    }
-
-    fn physical_dimension(&self) -> usize {
-        self.grid.geometry().dim()
-    }
-
-    fn number_of_reference_points(&self) -> usize {
-        self.table.shape()[1]
-    }
-
-    fn reference_to_physical(
-        &self,
-        point_index: usize,
-        value: &mut [<Self::Grid as GridType>::T],
-    ) {
-        compute_point(self.grid.geometry(), self.table.view(), self.cell_index, point_index, value)
-        //self.evaluator.compute_point(self.cell_index, point_index, value);
-    }
-
-    fn jacobian(&self, point_index: usize, value: &mut [T]) {
-        //self.evaluator.compute_jacobian(self.cell_index, point_index, value);
-    }
-
-    fn normal(&self, point_index: usize, value: &mut [T]) {
-        //self.evaluator.compute_normal(self.cell_index, point_index, value);
-    }
-}
-
-pub struct ReferenceMapIterator<'a, T: Float + Scalar, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid<T=T>, ArrayImpl: UnsafeRandomAccessByValue<4, Item = T> + Shape<4> + UnsafeRandomAccessByRef<4, Item=T>>
-where
-    GridImpl: 'a,
-    Self: 'a,
-{
-    grid: &'a GridImpl,
-    table: Array<T, ArrayImpl, 4>,
-    iter: Iter,
-}
-
-
-impl<'a, T: Float + Scalar, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid<T=T>, ArrayImpl: UnsafeRandomAccessByValue<4, Item = T> + Shape<4> + UnsafeRandomAccessByRef<4, Item=T>> Iterator
-    for ReferenceMapIterator<'a, T, Iter, GridImpl, ArrayImpl>
-where Self: 'a
-{
-    type Item = ReferenceMapInIter<'a, T, GridImpl, ArrayView<'a, T, ArrayImpl, 4>>;
-
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        if let Some(cell_index) = self.iter.next() {
-            Some(ReferenceMapInIter{grid: self.grid, table: self.table.view(), cell_index})
-        } else {
-            None
-        }
+    fn normal(&self, cell_index: usize, point_index: usize, value: &mut [T]) {
+        self.evaluator.compute_normal(cell_index, point_index, value);
     }
 }
 
@@ -283,15 +214,6 @@ where
     type ReferenceMap<'a> = ReferenceMap<'a, GridImpl>
     where
         Self: 'a;
-    type ReferenceMapInIter<'a> = ReferenceMapInIter<'a, T, GridImpl, ArrayView<'a, T, BaseArray<T, SliceContainer<'a, T>, 4>, 4>>
-    where
-        Self: 'a;
-
-    type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>> =
-        ReferenceMapIterator<'a, T, Iter, GridImpl, BaseArray<T, SliceContainer<'a, T>, 4>>
-    where
-        Self: 'a,
-        Iter: 'a;
 
     type Point<'a> = Point<'a, T, GridImpl::Geometry> where Self: 'a;
     type Cell<'a> = Cell<'a, T, GridImpl> where Self: 'a;
@@ -339,7 +261,6 @@ where
     fn reference_to_physical_map<'a>(
         &'a self,
         reference_points: &'a [Self::T],
-        cell_index: usize,
     ) -> Self::ReferenceMap<'a> {
         let gdim = self.geometry().dim();
         let npts = reference_points.len() / gdim;
@@ -347,25 +268,6 @@ where
         Self::ReferenceMap {
             grid: self,
             evaluator: self.geometry().get_evaluator(&rlst_reference_points),
-            cell_index,
-        }
-    }
-
-    fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
-        &'a self,
-        reference_points: &'a [Self::T],
-        iter: Iter,
-    ) -> Self::ReferenceMapIterator<'a, Iter>
-    where
-        Self: 'a,
-    {
-        let gdim = self.geometry().dim();
-        let npts = reference_points.len() / gdim;
-        let rlst_reference_points = rlst_array_from_slice2!(T, reference_points, [npts, gdim], [gdim, 1]);
-        Self::ReferenceMapIterator {
-            grid: self,
-            table: rlst_array_from_slice4!(T, &[], [1, 1, 1, 1], [1, 1, 1, 1]),
-            iter,
         }
     }
 

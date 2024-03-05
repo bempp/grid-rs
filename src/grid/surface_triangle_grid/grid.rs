@@ -12,7 +12,7 @@ use crate::traits::*;
 
 use super::{
     cell::TriangleCell,
-    reference_map::{TriangleReferenceMap, TriangleReferenceMapIterator},
+    reference_map::TriangleReferenceMap,
     vertex::TriangleVertex,
 };
 
@@ -207,12 +207,6 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
     type ReferenceMap<'a> = TriangleReferenceMap<'a, T>
     where
         Self: 'a;
-    type ReferenceMapInIter<'a> = Self::ReferenceMap<'a> where Self: 'a;
-
-    type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>> = TriangleReferenceMapIterator<'a, Self, Iter>
-    where
-        Self: 'a,
-        Iter: 'a;
 
     fn number_of_vertices(&self) -> usize {
         self.vertices.len()
@@ -255,20 +249,8 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
     fn reference_to_physical_map<'a>(
         &'a self,
         reference_points: &'a [Self::T],
-        cell_index: usize,
     ) -> Self::ReferenceMap<'a> {
-        TriangleReferenceMap::new(reference_points, cell_index, self)
-    }
-
-    fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
-        &'a self,
-        reference_points: &'a [Self::T],
-        iter: Iter,
-    ) -> Self::ReferenceMapIterator<'a, Iter>
-    where
-        Self: 'a,
-    {
-        TriangleReferenceMapIterator::new(iter, reference_points, self)
+        TriangleReferenceMap::new(reference_points, self)
     }
 
     fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair] {
@@ -342,13 +324,13 @@ mod test {
         reference_points[[0, 1]] = 1.0;
         reference_points[[1, 1]] = 0.0;
 
-        for map in
-            grid.iter_reference_to_physical_map(reference_points.data(), 0..grid.number_of_cells())
+        let map = grid.reference_to_physical_map(reference_points.data());
+        for cell_index in 0..grid.number_of_cells()
         {
             let mut points = rlst_dynamic_array2!(f64, [3, map.number_of_reference_points()]);
             for point_index in 0..map.number_of_reference_points() {
                 map.reference_to_physical(
-                    point_index,
+                    cell_index, point_index,
                     points.view_mut().slice(1, point_index).data_mut(),
                 );
             }
