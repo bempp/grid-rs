@@ -1,7 +1,7 @@
 //! Implementation of grid geometry
 
+use crate::grid_impl::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
 use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
-use crate::grid_impl::common::compute_point;
 use crate::reference_cell;
 use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
@@ -13,9 +13,8 @@ use rlst_dense::{
     base_array::BaseArray,
     data_container::VectorContainer,
     rlst_dynamic_array4,
-    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
+    traits::{RandomAccessByRef, Shape},
 };
-use std::cell::RefCell;
 
 /// Geometry of a serial grid
 pub struct SerialSingleElementGeometry<T: Float + Scalar> {
@@ -68,9 +67,7 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
     }
 }
 
-impl<T: Float + Scalar> Geometry for
-SerialSingleElementGeometry<T>
-{
+impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
     type IndexType = usize;
     type T = T;
     type Element = CiarletElement<T>;
@@ -146,7 +143,7 @@ SerialSingleElementGeometry<T>
         &'a self,
         points: &Points,
     ) -> GeometryEvaluatorSingleElement<'a, T> {
-       GeometryEvaluatorSingleElement::<T>::new(self, points)
+        GeometryEvaluatorSingleElement::<T>::new(self, points)
     }
 }
 
@@ -196,49 +193,36 @@ impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorSingleElement
     }
 
     fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [T]) {
-        compute_point(self.geometry, self.table.view(), cell_index, point_index, point);
+        compute_point(
+            self.geometry,
+            self.table.view(),
+            cell_index,
+            point_index,
+            point,
+        );
     }
 
     fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [T]) {
-        let gdim = self.geometry.dim();
-        let tdim = self.tdim;
-        let element_npts = self.geometry.element.dim();
-        assert_eq!(jacobian.len(), gdim * tdim);
-
-        for component in jacobian.iter_mut() {
-            *component = T::from(0.0).unwrap();
-        }
-        for (i, v) in self.geometry.cells[cell_index * element_npts..]
-            .iter()
-            .take(element_npts)
-            .enumerate()
-        {
-            for gd in 0..gdim {
-                for td in 0..tdim {
-                    jacobian[td * gdim + gd] +=
-                        unsafe { *self.geometry.coordinates.get_unchecked([*v, gd]) }
-                            * unsafe { *self.table.get_unchecked([1 + td, point_index, i, 0]) };
-                }
-            }
-        }
+        compute_jacobian(
+            self.geometry,
+            self.table.view(),
+            self.tdim,
+            cell_index,
+            point_index,
+            jacobian,
+        );
     }
 
     fn compute_normal(&self, cell_index: usize, point_index: usize, normal: &mut [T]) {
         let gdim = self.geometry.dim();
         let tdim = self.tdim;
-        assert_eq!(tdim, 2); // TODO: remove this
+        assert_eq!(tdim, 2);
         assert_eq!(tdim, gdim - 1);
-        let mut jacobian = [T::from(0.0).unwrap(); 6];
 
+        // TODO: remove memory assignment?
+        let mut jacobian = vec![T::from(0.0).unwrap(); gdim * tdim];
         self.compute_jacobian(cell_index, point_index, &mut jacobian[..]);
-
-        for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)] {
-            normal[i] = jacobian[j] * jacobian[3 + k] - jacobian[k] * jacobian[3 + j];
-        }
-        let size = Scalar::sqrt(normal.iter().map(|&x| Scalar::powi(x, 2)).sum::<T>());
-        for i in normal.iter_mut() {
-            *i /= size;
-        }
+        compute_normal_from_jacobian23(&jacobian, normal);
     }
 }
 

@@ -64,7 +64,9 @@ pub trait Geometry {
     type IndexType: std::fmt::Debug + Eq + Copy;
     type T: Float;
     type Element: FiniteElement;
-    type Evaluator<'a>: GeometryEvaluator<T=Self::T> where Self: 'a;
+    type Evaluator<'a>: GeometryEvaluator<T = Self::T>
+    where
+        Self: 'a;
 
     /// The geometric dimension
     fn dim(&self) -> usize;

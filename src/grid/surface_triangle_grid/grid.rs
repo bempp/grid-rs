@@ -10,11 +10,7 @@ use rlst_proc_macro::rlst_static_type;
 
 use crate::traits::*;
 
-use super::{
-    cell::TriangleCell,
-    reference_map::TriangleReferenceMap,
-    vertex::TriangleVertex,
-};
+use super::{cell::TriangleCell, reference_map::TriangleReferenceMap, vertex::TriangleVertex};
 
 pub struct TriangleSurfaceGrid<T: Float + Scalar> {
     pub(crate) vertices: Vec<[T; 3]>,
@@ -325,12 +321,12 @@ mod test {
         reference_points[[1, 1]] = 0.0;
 
         let map = grid.reference_to_physical_map(reference_points.data());
-        for cell_index in 0..grid.number_of_cells()
-        {
+        for cell_index in 0..grid.number_of_cells() {
             let mut points = rlst_dynamic_array2!(f64, [3, map.number_of_reference_points()]);
             for point_index in 0..map.number_of_reference_points() {
                 map.reference_to_physical(
-                    cell_index, point_index,
+                    cell_index,
+                    point_index,
                     points.view_mut().slice(1, point_index).data_mut(),
                 );
             }

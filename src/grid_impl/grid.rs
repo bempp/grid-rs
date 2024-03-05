@@ -1,4 +1,4 @@
-use crate::grid_impl::traits::{Geometry, Grid, Topology, GeometryEvaluator};
+use crate::grid_impl::traits::{Geometry, GeometryEvaluator, Grid, Topology};
 use crate::reference_cell::ReferenceCellType;
 use crate::traits::{
     cell::CellType, geometry::GeometryType, grid::GridType, point::PointType,
@@ -6,10 +6,10 @@ use crate::traits::{
 };
 use crate::types::vertex_iterator::PointIterator;
 use crate::types::CellLocalIndexPair;
-use std::iter::Copied;
 use num::Float;
 use rlst_common::types::Scalar;
 use rlst_dense::rlst_array_from_slice2;
+use std::iter::Copied;
 
 pub struct Point<'a, T: Float, G: Geometry> {
     geometry: &'a G,
@@ -83,7 +83,7 @@ where
     }
 }
 
-impl<'grid, T:Float + Scalar, GridImpl: Grid<T=T>> TopologyType for CellTopology<'grid, GridImpl>
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> TopologyType for CellTopology<'grid, GridImpl>
 where
     GridImpl: 'grid,
 {
@@ -131,7 +131,8 @@ where
     }
 }
 
-impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> GeometryType for CellGeometry<'grid, T, GridImpl>
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> GeometryType
+    for CellGeometry<'grid, T, GridImpl>
 where
     GridImpl: 'grid,
 {
@@ -171,8 +172,7 @@ pub struct ReferenceMap<'a, GridImpl: Grid> {
     evaluator: <<GridImpl as Grid>::Geometry as Geometry>::Evaluator<'a>,
 }
 
-impl<'a, T: Float + Scalar, GridImpl: Grid<T=T>> ReferenceMapType for ReferenceMap<'a, GridImpl>
-{
+impl<'a, T: Float + Scalar, GridImpl: Grid<T = T>> ReferenceMapType for ReferenceMap<'a, GridImpl> {
     type Grid = GridImpl;
 
     fn domain_dimension(&self) -> usize {
@@ -197,11 +197,13 @@ impl<'a, T: Float + Scalar, GridImpl: Grid<T=T>> ReferenceMapType for ReferenceM
     }
 
     fn jacobian(&self, cell_index: usize, point_index: usize, value: &mut [T]) {
-        self.evaluator.compute_jacobian(cell_index, point_index, value);
+        self.evaluator
+            .compute_jacobian(cell_index, point_index, value);
     }
 
     fn normal(&self, cell_index: usize, point_index: usize, value: &mut [T]) {
-        self.evaluator.compute_normal(cell_index, point_index, value);
+        self.evaluator
+            .compute_normal(cell_index, point_index, value);
     }
 }
 
@@ -264,7 +266,8 @@ where
     ) -> Self::ReferenceMap<'a> {
         let gdim = self.geometry().dim();
         let npts = reference_points.len() / gdim;
-        let rlst_reference_points = rlst_array_from_slice2!(T, reference_points, [npts, gdim], [gdim, 1]);
+        let rlst_reference_points =
+            rlst_array_from_slice2!(T, reference_points, [npts, gdim], [gdim, 1]);
         Self::ReferenceMap {
             grid: self,
             evaluator: self.geometry().get_evaluator(&rlst_reference_points),
