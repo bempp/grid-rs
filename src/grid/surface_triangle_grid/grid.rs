@@ -207,6 +207,7 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
     type ReferenceMap<'a> = TriangleReferenceMap<'a, T>
     where
         Self: 'a;
+    type ReferenceMapInIter<'a> = Self::ReferenceMap<'a> where Self: 'a;
 
     type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>> = TriangleReferenceMapIterator<'a, Self, Iter>
     where

@@ -1,5 +1,6 @@
 //! Grid implementation
 
+pub mod common;
 pub mod grid;
 pub mod mixed_grid;
 pub mod single_element_grid;

@@ -1,6 +1,7 @@
 //! Implementation of grid geometry
 
 use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
+use crate::grid_impl::common::compute_point;
 use crate::reference_cell;
 use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
@@ -195,23 +196,7 @@ impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorSingleElement
     }
 
     fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [T]) {
-        let gdim = self.geometry.dim();
-        let element_npts = self.geometry.element.dim();
-        assert_eq!(point.len(), gdim);
-
-        for component in point.iter_mut() {
-            *component = T::from(0.0).unwrap();
-        }
-        for (i, v) in self.geometry.cells[cell_index * element_npts..]
-            .iter()
-            .take(element_npts)
-            .enumerate()
-        {
-            let t = unsafe { *self.table.get_unchecked([0, point_index, i, 0]) };
-            for (j, component) in point.iter_mut().enumerate() {
-                *component += unsafe { *self.geometry.coordinates.get_unchecked([*v, j]) } * t;
-            }
-        }
+        compute_point(self.geometry, self.table.view(), cell_index, point_index, point);
     }
 
     fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [T]) {

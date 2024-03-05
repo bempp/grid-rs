@@ -22,9 +22,12 @@ pub trait GridType: std::marker::Sized {
     type ReferenceMap<'a>: ReferenceMapType
     where
         Self: 'a;
+    type ReferenceMapInIter<'a>: ReferenceMapType
+    where
+        Self: 'a;
 
     type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>>: std::iter::Iterator<
-        Item = Self::ReferenceMap<'a>,
+        Item = Self::ReferenceMapInIter<'a>,
     >
     where
         Self: 'a,
