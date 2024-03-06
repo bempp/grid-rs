@@ -8,6 +8,7 @@ use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use bempp_element::element::{create_element, ElementFamily, Inverse};
 use bempp_traits::element::{Continuity, FiniteElement};
+use log::warn;
 use num::Float;
 use rlst_common::types::Scalar;
 use rlst_dense::{array::Array, base_array::BaseArray, data_container::VectorContainer};
@@ -25,6 +26,9 @@ impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
         cell_type: ReferenceCellType,
         cell_degree: usize,
     ) -> Self {
+        if cell_type == ReferenceCellType::Triangle && cell_degree == 1 {
+            warn!("Creating a single element grid with a P1 triangle. Using a FlatTriangleGrid would be faster.");
+        }
         let element = create_element::<T>(
             ElementFamily::Lagrange,
             cell_type,
@@ -36,7 +40,6 @@ impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
 
         let mut start = 0;
         let nvertices = reference_cell::entity_counts(cell_type)[0];
-        println!("{nvertices}");
         let npoints = element.dim();
         while start < cells.len() {
             cell_vertices.extend_from_slice(&cells[start..start + nvertices]);

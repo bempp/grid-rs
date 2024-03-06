@@ -15,3 +15,4 @@ rlst = { git = "https://github.com/linalg-rs/rlst.git" }
 rlst-dense = { git = "https://github.com/linalg-rs/rlst.git" }
 rlst-proc-macro = { git = "https://github.com/linalg-rs/rlst.git" }
 rlst-common = { git = "https://github.com/linalg-rs/rlst.git" }
+log = "0.4"

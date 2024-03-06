@@ -64,8 +64,8 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
             let size = e.dim();
 
             midpoints[element_index] = vec![vec![T::from(0.0).unwrap(); dim]; ncells];
-            diameters[element_index] = vec![T::from(0.0).unwrap(); ncells];
-            volumes[element_index] = vec![T::from(0.0).unwrap(); ncells];
+            diameters[element_index] = vec![T::from(0.0).unwrap(); ncells]; // TODO
+            volumes[element_index] = vec![T::from(0.0).unwrap(); ncells]; // TODO
 
             let mut table = rlst_dynamic_array4!(T, e.tabulate_array_shape(0, 1));
             e.tabulate(

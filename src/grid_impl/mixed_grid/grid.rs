@@ -6,6 +6,7 @@ use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use bempp_element::element::{create_element, ElementFamily, Inverse};
 use bempp_traits::element::{Continuity, FiniteElement};
+use log::warn;
 use num::Float;
 use rlst_common::types::Scalar;
 use rlst_dense::{array::Array, base_array::BaseArray, data_container::VectorContainer};
@@ -42,8 +43,7 @@ impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
             .collect::<Vec<_>>();
 
         if elements.len() == 1 {
-            println!("Creating a mixed grid with only one element. Using a SerialSingleElementGrid would be faster.");
-            // TODO: make into a warning
+            warn!("Creating a mixed grid with only one element. Using a SerialSingleElementGrid would be faster.");
         }
 
         let mut cell_vertices = vec![];
