@@ -52,14 +52,6 @@ pub trait Topology {
     /// Get the indices of the vertices that are connect to theentity with dimension `dim` and index `index`
     fn entity_vertices(&self, dim: usize, index: Self::IndexType) -> Option<&[Self::IndexType]>;
 
-    /// Get the indices and types of entities of dimension `dim1` that are connected to the entity of dimension `dim0` with index `index`
-    fn connectivity(
-        &self,
-        dim0: usize,
-        index: Self::IndexType,
-        dim1: usize,
-    ) -> Option<&[Self::IndexType]>;
-
     /// Get the ownership of a mesh entity
     fn entity_ownership(&self, dim: usize, index: Self::IndexType) -> Ownership;
 }

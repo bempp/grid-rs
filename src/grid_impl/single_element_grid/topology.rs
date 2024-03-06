@@ -38,7 +38,6 @@ impl SerialSingleElementTopology {
     pub fn new(cells_input: &[usize], cell_type: ReferenceCellType) -> Self {
         let size = reference_cell::entity_counts(cell_type)[0];
         let ncells = cells_input.len() / size;
-        let nvertices = cells_input.iter().max().unwrap() + 1;
 
         let mut index_map = vec![0; ncells];
         let mut vertices = vec![];
@@ -56,8 +55,6 @@ impl SerialSingleElementTopology {
 
         entities_to_cells[dim] = vec![vec![]; ncells];
 
-        // dim0 = dim, dim1 = 0
-        let mut cty = vec![];
         let mut start = 0;
         for (cell_i, i) in index_map.iter_mut().enumerate() {
             let cell = &cells_input[start..start + size];
@@ -70,7 +67,6 @@ impl SerialSingleElementTopology {
                 }
                 row.push(vertices.iter().position(|&r| r == *v).unwrap());
             }
-            cty.push(row.clone());
 
             for (local_index, v) in row.iter().enumerate() {
                 entities_to_cells[0][*v].push(CellLocalIndexPair::new(cell_i, local_index));
@@ -83,7 +79,7 @@ impl SerialSingleElementTopology {
             start += size;
         }
 
-        for i in 0..nvertices {
+        for i in 0..vertices.len() {
             entities_to_vertices[0].push(vec![i]);
         }
         for d in 1..dim {
@@ -162,15 +158,6 @@ impl Topology for SerialSingleElementTopology {
 
     fn entity_types(&self, dim: usize) -> &[ReferenceCellType] {
         &self.entity_types[dim..dim + 1]
-    }
-
-    fn connectivity(
-        &self,
-        _dim0: usize,
-        _index: usize,
-        _dim1: usize,
-    ) -> Option<&[Self::IndexType]> {
-        panic!();
     }
 
     fn entity_ownership(&self, _dim: usize, _index: Self::IndexType) -> Ownership {
