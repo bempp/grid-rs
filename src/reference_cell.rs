@@ -56,6 +56,26 @@ pub fn vertices<T: Float>(cell: ReferenceCellType) -> Vec<T> {
     }
 }
 
+/// The midpoint of the cell
+pub fn midpoint<T: Float>(cell: ReferenceCellType) -> Vec<T> {
+    let half = T::from(0.5).unwrap();
+    let third = T::from(1.0).unwrap() / T::from(3.0).unwrap();
+    match cell {
+        ReferenceCellType::Point => vec![],
+        ReferenceCellType::Interval => vec![half],
+        ReferenceCellType::Triangle => vec![third; 2],
+        ReferenceCellType::Quadrilateral => vec![half; 3],
+        ReferenceCellType::Tetrahedron => vec![T::from(1.0).unwrap() / T::from(6.0).unwrap(); 3],
+        ReferenceCellType::Hexahedron => vec![half; 3],
+        ReferenceCellType::Prism => vec![third, third, half],
+        ReferenceCellType::Pyramid => vec![
+            T::from(0.4).unwrap(),
+            T::from(0.4).unwrap(),
+            T::from(0.2).unwrap(),
+        ],
+    }
+}
+
 /// The edges of the reference cell
 pub fn edges(cell: ReferenceCellType) -> Vec<Vec<usize>> {
     match cell {

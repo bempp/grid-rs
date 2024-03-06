@@ -11,8 +11,8 @@ use rlst_dense::{
     array::Array,
     base_array::BaseArray,
     data_container::VectorContainer,
-    rlst_dynamic_array4,
-    traits::{RandomAccessByRef, Shape},
+    rlst_array_from_slice2, rlst_dynamic_array4,
+    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
 
 /// Geometry of a serial grid
@@ -41,15 +41,37 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
 
         let mut index_map = vec![0; ncells];
         let mut cells = vec![];
-        let mut midpoints = vec![];
+        let mut midpoints = vec![vec![T::from(0.0).unwrap(); dim]; ncells];
         let mut diameters = vec![];
         let mut volumes = vec![];
 
-        for (cell_i, i) in index_map.iter_mut().enumerate() {
-            *i = cell_i;
-            midpoints.push(vec![T::from(0.0).unwrap(); dim]); // TODO
+        // TODO: warning if element is P1
+
+        let mut table = rlst_dynamic_array4!(T, element.tabulate_array_shape(0, 1));
+        element.tabulate(
+            &rlst_array_from_slice2!(
+                T,
+                &reference_cell::midpoint(element.cell_type()),
+                [1, reference_cell::dim(element.cell_type())]
+            ),
+            0,
+            &mut table,
+        );
+
+        let mut start = 0;
+        for (cell_i, index) in index_map.iter_mut().enumerate() {
+            *index = cell_i;
+
+            for (i, v) in cells_input[start..start + size].iter().enumerate() {
+                let t = unsafe { *table.get_unchecked([0, 0, i, 0]) };
+                for (j, component) in midpoints[cell_i].iter_mut().enumerate() {
+                    *component += unsafe { *coordinates.get_unchecked([*v, j]) } * t;
+                }
+            }
+
             diameters.push(T::from(0.0).unwrap()); // TODO
             volumes.push(T::from(0.0).unwrap()); // TODO
+            start += size;
         }
         cells.extend_from_slice(cells_input);
 
@@ -436,6 +458,41 @@ mod test {
                 for (i, j) in computed_normal.iter().zip(normal) {
                     assert_relative_eq!(*i, *j, epsilon = 1e-12);
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn test_midpoint_2d() {
+        let g = example_geometry_2d();
+
+        let mut midpoint = vec![0.0; 2];
+        for (cell_i, point) in [vec![2.0 / 3.0, 1.0 / 3.0], vec![1.0 / 3.0, 2.0 / 3.0]]
+            .iter()
+            .enumerate()
+        {
+            g.midpoint(cell_i, &mut midpoint);
+            for (i, j) in midpoint.iter().zip(point) {
+                assert_relative_eq!(*i, *j, epsilon = 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn test_midpoint_3d() {
+        let g = example_geometry_3d();
+
+        let mut midpoint = vec![0.0; 3];
+        for (cell_i, point) in [
+            vec![2.0 / 3.0, 1.0 / 3.0, 2.0 / 9.0],
+            vec![1.0 / 3.0, 2.0 / 3.0, 0.0],
+        ]
+        .iter()
+        .enumerate()
+        {
+            g.midpoint(cell_i, &mut midpoint);
+            for (i, j) in midpoint.iter().zip(point) {
+                assert_relative_eq!(*i, *j, epsilon = 1e-12);
             }
         }
     }
