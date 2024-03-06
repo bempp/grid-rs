@@ -309,16 +309,19 @@ where
         }
     }
 
-    fn point_to_cells(&self, _point_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
-        panic!(); // TODO
+    fn vertex_to_cells(
+        &self,
+        vertex_index: Self::IndexType,
+    ) -> &[CellLocalIndexPair<Self::IndexType>] {
+        self.topology().entity_to_cells(0, vertex_index).unwrap()
     }
 
-    fn edge_to_cells(&self, _edge_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
-        panic!(); // TODO
+    fn edge_to_cells(&self, edge_index: Self::IndexType) -> &[CellLocalIndexPair<Self::IndexType>] {
+        self.topology().entity_to_cells(1, edge_index).unwrap()
     }
 
-    fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
-        panic!(); // TODO
+    fn face_to_cells(&self, face_index: Self::IndexType) -> &[CellLocalIndexPair<Self::IndexType>] {
+        self.topology().entity_to_cells(2, face_index).unwrap()
     }
 }
 

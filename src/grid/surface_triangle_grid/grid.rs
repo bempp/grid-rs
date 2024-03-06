@@ -253,8 +253,8 @@ impl<T: Float + Scalar> GridType for TriangleSurfaceGrid<T> {
         self.edge_to_cells[edge_index].as_slice()
     }
 
-    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair<usize>] {
-        self.point_to_cells[point_index].as_slice()
+    fn vertex_to_cells(&self, vertex_index: usize) -> &[CellLocalIndexPair<usize>] {
+        self.point_to_cells[vertex_index].as_slice()
     }
 
     fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair<usize>] {

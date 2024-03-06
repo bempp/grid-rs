@@ -206,7 +206,6 @@ impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorSingleElement
         assert_eq!(tdim, 2);
         assert_eq!(tdim, gdim - 1);
 
-        // TODO: remove memory assignment?
         let mut jacobian = vec![T::from(0.0).unwrap(); gdim * tdim];
         self.compute_jacobian(cell_index, point_index, &mut jacobian[..]);
         compute_normal_from_jacobian23(&jacobian, normal);

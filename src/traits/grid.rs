@@ -67,9 +67,12 @@ pub trait GridType: std::marker::Sized {
         reference_points: &'a [Self::T],
     ) -> Self::ReferenceMap<'a>;
 
-    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair<Self::IndexType>];
+    fn vertex_to_cells(
+        &self,
+        vertex_index: Self::IndexType,
+    ) -> &[CellLocalIndexPair<Self::IndexType>];
 
-    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair<Self::IndexType>];
+    fn edge_to_cells(&self, edge_index: Self::IndexType) -> &[CellLocalIndexPair<Self::IndexType>];
 
-    fn face_to_cells(&self, face_index: usize) -> &[CellLocalIndexPair<Self::IndexType>];
+    fn face_to_cells(&self, face_index: Self::IndexType) -> &[CellLocalIndexPair<Self::IndexType>];
 }
