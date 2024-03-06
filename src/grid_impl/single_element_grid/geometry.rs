@@ -45,7 +45,7 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
         let mut diameters = vec![];
         let mut volumes = vec![];
 
-        // TODO: warning if element is P1
+        // TODO: warning if element is P1 (in grid creation not here?
 
         let mut table = rlst_dynamic_array4!(T, element.tabulate_array_shape(0, 1));
         element.tabulate(

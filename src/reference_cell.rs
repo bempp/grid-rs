@@ -64,7 +64,7 @@ pub fn midpoint<T: Float>(cell: ReferenceCellType) -> Vec<T> {
         ReferenceCellType::Point => vec![],
         ReferenceCellType::Interval => vec![half],
         ReferenceCellType::Triangle => vec![third; 2],
-        ReferenceCellType::Quadrilateral => vec![half; 3],
+        ReferenceCellType::Quadrilateral => vec![half; 2],
         ReferenceCellType::Tetrahedron => vec![T::from(1.0).unwrap() / T::from(6.0).unwrap(); 3],
         ReferenceCellType::Hexahedron => vec![half; 3],
         ReferenceCellType::Prism => vec![third, third, half],

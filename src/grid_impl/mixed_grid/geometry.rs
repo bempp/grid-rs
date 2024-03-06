@@ -11,8 +11,8 @@ use rlst_dense::{
     array::Array,
     base_array::BaseArray,
     data_container::VectorContainer,
-    rlst_dynamic_array4,
-    traits::{RandomAccessByRef, Shape},
+    rlst_array_from_slice2, rlst_dynamic_array4,
+    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
 
 /// Geometry of a serial grid
@@ -39,9 +39,6 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
         let dim = coordinates.shape()[1];
         let mut index_map = vec![(0, 0); cell_elements.len()];
         let mut cells = vec![];
-        let mut midpoints = vec![];
-        let mut diameters = vec![];
-        let mut volumes = vec![];
 
         for (element_index, _e) in elements.iter().enumerate() {
             let mut e_cells = vec![];
@@ -58,18 +55,40 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
             cells.push(e_cells);
         }
 
+        let mut midpoints = vec![vec![]; cell_elements.len()];
+        let mut diameters = vec![vec![]; cell_elements.len()];
+        let mut volumes = vec![vec![]; cell_elements.len()];
+
         for (element_index, e) in elements.iter().enumerate() {
-            let mut e_midpoints = vec![];
-            let mut e_diameters = vec![];
-            let mut e_volumes = vec![];
-            for _cell in 0..cells[element_index].len() / e.dim() {
-                e_midpoints.push(vec![T::from(0.0).unwrap(); dim]); // TODO
-                e_diameters.push(T::from(0.0).unwrap()); // TODO
-                e_volumes.push(T::from(0.0).unwrap()); // TODO
+            let ncells = cells[element_index].len() / e.dim();
+            let size = e.dim();
+
+            midpoints[element_index] = vec![vec![T::from(0.0).unwrap(); dim]; ncells];
+            diameters[element_index] = vec![T::from(0.0).unwrap(); ncells];
+            volumes[element_index] = vec![T::from(0.0).unwrap(); ncells];
+
+            let mut table = rlst_dynamic_array4!(T, e.tabulate_array_shape(0, 1));
+            e.tabulate(
+                &rlst_array_from_slice2!(
+                    T,
+                    &reference_cell::midpoint(e.cell_type()),
+                    [1, reference_cell::dim(e.cell_type())]
+                ),
+                0,
+                &mut table,
+            );
+
+            let mut start = 0;
+            for cell_i in 0..ncells {
+                for (i, v) in cells[element_index][start..start + size].iter().enumerate() {
+                    let t = unsafe { *table.get_unchecked([0, 0, i, 0]) };
+                    for (j, component) in midpoints[element_index][cell_i].iter_mut().enumerate() {
+                        *component += unsafe { *coordinates.get_unchecked([*v, j]) } * t;
+                    }
+                }
+
+                start += size;
             }
-            midpoints.push(e_midpoints);
-            diameters.push(e_diameters);
-            volumes.push(e_volumes);
         }
 
         Self {
@@ -363,6 +382,38 @@ mod test {
                         epsilon = 1e-12
                     );
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn test_midpoint() {
+        let g = example_geometry();
+
+        let mut midpoint = vec![0.0; 2];
+        for (cell_i, point) in [vec![2.0 / 3.0, 1.0 / 3.0], vec![1.0 / 3.0, 2.0 / 3.0]]
+            .iter()
+            .enumerate()
+        {
+            g.midpoint(g.index_map()[cell_i], &mut midpoint);
+            for (i, j) in midpoint.iter().zip(point) {
+                assert_relative_eq!(*i, *j, epsilon = 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn test_midpoint_mixed() {
+        let g = example_geometry_mixed();
+
+        let mut midpoint = vec![0.0; 2];
+        for (cell_i, point) in [vec![0.5, 0.5], vec![4.0 / 3.0, 1.0 / 3.0]]
+            .iter()
+            .enumerate()
+        {
+            g.midpoint(g.index_map()[cell_i], &mut midpoint);
+            for (i, j) in midpoint.iter().zip(point) {
+                assert_relative_eq!(*i, *j, epsilon = 1e-12);
             }
         }
     }
