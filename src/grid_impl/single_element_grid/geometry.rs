@@ -387,7 +387,7 @@ mod test {
         .enumerate()
         {
             for (point_i, jacobian) in jacobians.iter().enumerate() {
-                evaluator.compute_jacobian(cell_i, point_i, &mut computed_jacobian.data_mut());
+                evaluator.compute_jacobian(cell_i, point_i, computed_jacobian.data_mut());
                 for (i, row) in jacobian.iter().enumerate() {
                     for (j, entry) in row.iter().enumerate() {
                         assert_relative_eq!(
