@@ -5,7 +5,6 @@ use crate::traits::{
     cell::CellType, geometry::GeometryType, grid::GridType, point::PointType,
     reference_map::ReferenceMapType, topology::TopologyType,
 };
-use crate::types::point_iterator::PointIterator;
 use crate::types::CellLocalIndexPair;
 use bempp_traits::element::FiniteElement;
 use num::Float;
@@ -24,13 +23,39 @@ pub struct Cell<'a, T: Float, GridImpl: Grid> {
     _t: std::marker::PhantomData<T>,
 }
 pub struct CellTopology<'a, GridImpl: Grid> {
-    grid: &'a GridImpl,
+    topology: &'a <GridImpl as Grid>::Topology,
     index: <<GridImpl as Grid>::Topology as Topology>::IndexType,
 }
 pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
-    grid: &'a GridImpl,
+    geometry: &'a <GridImpl as Grid>::Geometry,
     index: <<GridImpl as Grid>::Geometry as Geometry>::IndexType,
     _t: std::marker::PhantomData<T>,
+}
+pub struct ReferenceMap<'a, GridImpl: Grid> {
+    grid: &'a GridImpl,
+    evaluator: <<GridImpl as Grid>::Geometry as Geometry>::Evaluator<'a>,
+}
+pub struct PointIterator<'a, GridImpl: Grid, Iter: std::iter::Iterator<Item = usize>> {
+    iter: Iter,
+    geometry: &'a <GridImpl as Grid>::Geometry,
+}
+
+impl<'a, GridImpl: Grid, Iter: std::iter::Iterator<Item = usize>> std::iter::Iterator
+    for PointIterator<'a, GridImpl, Iter>
+{
+    type Item = Point<'a, <GridImpl as Grid>::T, <GridImpl as Grid>::Geometry>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(index) = self.iter.next() {
+            Some(Point {
+                geometry: self.geometry,
+                index,
+                _t: std::marker::PhantomData,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a, T: Float, G: Geometry<T = T>> PointType for Point<'a, T, G> {
@@ -67,7 +92,7 @@ where
 
     fn topology(&self) -> Self::Topology<'_> {
         CellTopology::<'_, GridImpl> {
-            grid: self.grid, // TODO: replace with just topology
+            topology: self.grid.topology(),
             index: self.grid.topology().index_map()[self.index],
         }
     }
@@ -78,7 +103,7 @@ where
 
     fn geometry(&self) -> Self::Geometry<'_> {
         CellGeometry::<'_, T, GridImpl> {
-            grid: self.grid,
+            geometry: self.grid.geometry(),
             index: self.grid.geometry().index_map()[self.index],
             _t: std::marker::PhantomData,
         }
@@ -102,8 +127,7 @@ where
         Self: 'a;
 
     fn vertex_indices(&self) -> Self::VertexIndexIter<'_> {
-        self.grid
-            .topology()
+        self.topology
             .cell_to_entities(self.index, 0)
             .unwrap()
             .iter()
@@ -111,8 +135,7 @@ where
     }
 
     fn edge_indices(&self) -> Self::EdgeIndexIter<'_> {
-        self.grid
-            .topology()
+        self.topology
             .cell_to_entities(self.index, 1)
             .unwrap()
             .iter()
@@ -120,8 +143,7 @@ where
     }
 
     fn face_indices(&self) -> Self::FaceIndexIter<'_> {
-        self.grid
-            .topology()
+        self.topology
             .cell_to_entities(self.index, 2)
             .unwrap()
             .iter()
@@ -129,7 +151,7 @@ where
     }
 
     fn cell_type(&self) -> ReferenceCellType {
-        self.grid.topology().cell_type(self.index).unwrap()
+        self.topology.cell_type(self.index).unwrap()
     }
 }
 
@@ -146,52 +168,42 @@ where
     type PointIterator<'iter> = Self::VertexIterator<'iter> where Self: 'iter;
 
     fn physical_dimension(&self) -> usize {
-        self.grid.geometry().dim()
+        self.geometry.dim()
     }
 
     fn midpoint(&self, point: &mut [T]) {
-        self.grid.geometry().midpoint(self.index, point)
+        self.geometry.midpoint(self.index, point)
     }
 
     fn diameter(&self) -> T {
-        self.grid.geometry().diameter(self.index)
+        self.geometry.diameter(self.index)
     }
 
     fn volume(&self) -> T {
-        self.grid.geometry().volume(self.index)
+        self.geometry.volume(self.index)
     }
 
     fn points(&self) -> Self::PointIterator<'_> {
-        PointIterator::new(
-            self.grid
-                .geometry()
+        PointIterator {
+            iter: self
+                .geometry
                 .cell_points(self.index)
                 .unwrap()
                 .iter()
                 .copied(),
-            self.grid,
-        )
+            geometry: self.geometry,
+        }
     }
     fn vertices(&self) -> Self::VertexIterator<'_> {
-        let cell_type = self
-            .grid
-            .geometry()
-            .cell_element(self.index)
-            .unwrap()
-            .cell_type();
+        let cell_type = self.geometry.cell_element(self.index).unwrap().cell_type();
         let nvertices = reference_cell::entity_counts(cell_type)[0];
-        PointIterator::new(
-            self.grid.geometry().cell_points(self.index).unwrap()[..nvertices]
+        PointIterator {
+            iter: self.geometry.cell_points(self.index).unwrap()[..nvertices]
                 .iter()
                 .copied(),
-            self.grid,
-        )
+            geometry: self.geometry,
+        }
     }
-}
-
-pub struct ReferenceMap<'a, GridImpl: Grid> {
-    grid: &'a GridImpl,
-    evaluator: <<GridImpl as Grid>::Geometry as Geometry>::Evaluator<'a>,
 }
 
 impl<'a, T: Float + Scalar, GridImpl: Grid<T = T>> ReferenceMapType for ReferenceMap<'a, GridImpl> {
@@ -298,15 +310,15 @@ where
     }
 
     fn point_to_cells(&self, _point_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
-        panic!();
+        panic!(); // TODO
     }
 
     fn edge_to_cells(&self, _edge_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
-        panic!();
+        panic!(); // TODO
     }
 
     fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair<Self::IndexType>] {
-        panic!();
+        panic!(); // TODO
     }
 }
 
