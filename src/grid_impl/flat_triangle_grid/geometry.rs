@@ -1,6 +1,5 @@
 //! Implementation of grid geometry
 
-use crate::grid_impl::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
 use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
 use crate::types::ReferenceCellType;
@@ -14,8 +13,11 @@ use rlst_dense::{
     array::{Array, SliceArray},
     base_array::BaseArray,
     data_container::VectorContainer,
-    rlst_array_from_slice1, rlst_array_from_slice2, rlst_dynamic_array4,
-    traits::{DefaultIterator, RandomAccessByRef, RawAccess, Shape, UnsafeRandomAccessByRef},
+    rlst_array_from_slice2,
+    traits::{
+        DefaultIterator, DefaultIteratorMut, RandomAccessByRef, RawAccess, Shape,
+        UnsafeRandomAccessByRef,
+    },
 };
 use rlst_proc_macro::rlst_static_type;
 
@@ -23,7 +25,7 @@ use rlst_proc_macro::rlst_static_type;
 pub struct SerialFlatTriangleGeometry<T: Float + Scalar + Inverse> {
     dim: usize,
     index_map: Vec<usize>,
-    pub(crate) coordinates: Vec<Vec<T>>,
+    pub(crate) coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
     pub(crate) cells: Vec<Vec<usize>>,
     pub(crate) element: CiarletElement<T>,
     midpoints: Vec<rlst_static_type!(T, 3)>,
@@ -37,11 +39,18 @@ pub struct SerialFlatTriangleGeometry<T: Float + Scalar + Inverse> {
 unsafe impl<T: Float + Scalar + Inverse> Sync for SerialFlatTriangleGeometry<T> {}
 
 impl<T: Float + Scalar<Real = T> + Inverse> SerialFlatTriangleGeometry<T> {
-    pub fn new(coordinates: Vec<Vec<T>>, cells: Vec<Vec<usize>>) -> Self {
-        assert!(coordinates.len() > 0);
-        let dim = coordinates[0].len();
+    pub fn new(
+        coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
+        cells_input: &[usize],
+    ) -> Self {
+        let dim = coordinates.shape()[1];
         assert_eq!(dim, 3);
-        let ncells = cells.len();
+        let ncells = cells_input.len() / dim;
+
+        let mut cells = vec![vec![]; ncells];
+        for (cell_i, cell) in cells.iter_mut().enumerate() {
+            cell.extend_from_slice(&cells_input[cell_i * 3..(cell_i + 1) * 3])
+        }
 
         let mut index_map = vec![0; ncells];
         let mut midpoints = vec![];
@@ -54,6 +63,10 @@ impl<T: Float + Scalar<Real = T> + Inverse> SerialFlatTriangleGeometry<T> {
         let mut b = rlst_static_array!(T, 3);
         let mut c = rlst_static_array!(T, 3);
 
+        let mut v0 = rlst_static_array!(T, 3);
+        let mut v1 = rlst_static_array!(T, 3);
+        let mut v2 = rlst_static_array!(T, 3);
+
         for (cell_i, index) in index_map.iter_mut().enumerate() {
             *index = cell_i;
 
@@ -61,9 +74,15 @@ impl<T: Float + Scalar<Real = T> + Inverse> SerialFlatTriangleGeometry<T> {
             normals.push(rlst_static_array!(T, 3));
             jacobians.push(rlst_static_array!(T, 3, 2));
 
-            let v0 = rlst_array_from_slice1!(T, coordinates[cells[cell_i][0]].as_slice(), [3]);
-            let v1 = rlst_array_from_slice1!(T, coordinates[cells[cell_i][1]].as_slice(), [3]);
-            let v2 = rlst_array_from_slice1!(T, coordinates[cells[cell_i][2]].as_slice(), [3]);
+            for (i, c) in v0.iter_mut().enumerate() {
+                *c = unsafe { *coordinates.get_unchecked([cells[cell_i][0], i]) };
+            }
+            for (i, c) in v1.iter_mut().enumerate() {
+                *c = unsafe { *coordinates.get_unchecked([cells[cell_i][1], i]) };
+            }
+            for (i, c) in v2.iter_mut().enumerate() {
+                *c = unsafe { *coordinates.get_unchecked([cells[cell_i][2], i]) };
+            }
 
             midpoints[cell_i].fill_from(
                 (v0.view() + v1.view() + v2.view()).scalar_mul(T::from(1.0 / 3.0).unwrap()),
@@ -79,12 +98,7 @@ impl<T: Float + Scalar<Real = T> + Inverse> SerialFlatTriangleGeometry<T> {
             let b_norm = b.view().norm_2();
             let c_norm = c.view().norm_2();
 
-            println!("{cell_i}");
-            println!("{:?}", a.data());
-            println!("{:?}", b.data());
             a.cross(b.view(), normals[cell_i].view_mut());
-            println!("{:?}", normals[cell_i].data());
-            println!();
 
             let normal_length = normals[cell_i].view().norm_2();
             normals[cell_i].scale_in_place(T::one() / normal_length);
@@ -136,15 +150,11 @@ impl<T: Float + Scalar + Inverse> Geometry for SerialFlatTriangleGeometry<T> {
     }
 
     fn coordinate(&self, point_index: usize, coord_index: usize) -> Option<&Self::T> {
-        if point_index < self.coordinates.len() {
-            self.coordinates[point_index].get(coord_index)
-        } else {
-            None
-        }
+        self.coordinates.get([point_index, coord_index])
     }
 
     fn point_count(&self) -> usize {
-        self.coordinates.len()
+        self.coordinates.shape()[0]
     }
 
     fn cell_points(&self, index: usize) -> Option<&[usize]> {
@@ -226,16 +236,15 @@ impl<'a, T: Float + Scalar + Inverse> GeometryEvaluator for GeometryEvaluatorFla
     }
 
     fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [T]) {
-        let v0 = &self.geometry.coordinates[self.geometry.cells[cell_index][0]];
         let jacobian = &self.geometry.jacobians[cell_index];
         for (index, val_out) in point.iter_mut().enumerate() {
-            *val_out = v0[index]
+            *val_out = self.geometry.coordinates[[self.geometry.cells[cell_index][0], index]]
                 + jacobian[[index, 0]] * self.points[[point_index, 0]]
                 + jacobian[[index, 1]] * self.points[[point_index, 1]];
         }
     }
 
-    fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [T]) {
+    fn compute_jacobian(&self, cell_index: usize, _point_index: usize, jacobian: &mut [T]) {
         for (i, j) in jacobian
             .iter_mut()
             .zip(self.geometry.jacobians[cell_index].iter())
@@ -258,33 +267,45 @@ impl<'a, T: Float + Scalar + Inverse> GeometryEvaluator for GeometryEvaluatorFla
 mod test {
     use crate::grid_impl::flat_triangle_grid::geometry::*;
     use approx::*;
-    use bempp_element::element::{create_element, ElementFamily};
-    use bempp_traits::element::Continuity;
     use rlst_dense::{
         rlst_dynamic_array2,
         traits::{RandomAccessMut, RawAccessMut},
     };
 
     fn example_geometry_flat() -> SerialFlatTriangleGeometry<f64> {
-        let points = vec![
-            vec![0.0, 0.0, 0.0],
-            vec![1.0, 0.0, 0.0],
-            vec![1.0, 1.0, 0.0],
-            vec![0.0, 1.0, 0.0],
-        ];
-        let cells = vec![vec![0, 1, 2], vec![0, 2, 3]];
-        SerialFlatTriangleGeometry::new(points, cells)
+        let mut points = rlst_dynamic_array2!(f64, [4, 3]);
+        points[[0, 0]] = 0.0;
+        points[[0, 1]] = 0.0;
+        points[[0, 2]] = 0.0;
+        points[[1, 0]] = 1.0;
+        points[[1, 1]] = 0.0;
+        points[[1, 2]] = 0.0;
+        points[[2, 0]] = 1.0;
+        points[[2, 1]] = 1.0;
+        points[[2, 2]] = 0.0;
+        points[[3, 0]] = 0.0;
+        points[[3, 1]] = 1.0;
+        points[[3, 2]] = 0.0;
+        let cells = vec![0, 1, 2, 0, 2, 3];
+        SerialFlatTriangleGeometry::new(points, &cells)
     }
 
     fn example_geometry_3d() -> SerialFlatTriangleGeometry<f64> {
-        let points = vec![
-            vec![0.0, 0.0, 0.0],
-            vec![1.0, 0.0, 1.0],
-            vec![1.0, 1.0, 0.0],
-            vec![0.0, 1.0, 0.0],
-        ];
-        let cells = vec![vec![0, 1, 2], vec![0, 2, 3]];
-        SerialFlatTriangleGeometry::new(points, cells)
+        let mut points = rlst_dynamic_array2!(f64, [4, 3]);
+        points[[0, 0]] = 0.0;
+        points[[0, 1]] = 0.0;
+        points[[0, 2]] = 0.0;
+        points[[1, 0]] = 1.0;
+        points[[1, 1]] = 0.0;
+        points[[1, 2]] = 1.0;
+        points[[2, 0]] = 1.0;
+        points[[2, 1]] = 1.0;
+        points[[2, 2]] = 0.0;
+        points[[3, 0]] = 0.0;
+        points[[3, 1]] = 1.0;
+        points[[3, 2]] = 0.0;
+        let cells = vec![0, 1, 2, 0, 2, 3];
+        SerialFlatTriangleGeometry::new(points, &cells)
     }
 
     #[test]
@@ -426,12 +447,6 @@ mod test {
         .iter()
         .enumerate()
         {
-            for point_i in 0..points.shape()[0] {
-                evaluator.compute_normal(cell_i, point_i, &mut computed_normal);
-                println!("{normal:?}");
-                println!("{computed_normal:?}");
-                println!("");
-            }
             for point_i in 0..points.shape()[0] {
                 evaluator.compute_normal(cell_i, point_i, &mut computed_normal);
                 assert_relative_eq!(

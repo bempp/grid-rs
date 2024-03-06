@@ -12,7 +12,7 @@ use rlst_dense::{
     base_array::BaseArray,
     data_container::VectorContainer,
     rlst_array_from_slice2, rlst_dynamic_array4,
-    traits::{RandomAccessByRef, RawAccess, Shape, UnsafeRandomAccessByRef},
+    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
 
 /// Geometry of a serial grid

@@ -3,7 +3,6 @@
 use crate::grid_impl::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
 use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
-use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
@@ -13,7 +12,7 @@ use rlst_dense::{
     base_array::BaseArray,
     data_container::VectorContainer,
     rlst_array_from_slice2, rlst_dynamic_array4,
-    traits::{RandomAccessByRef, RawAccess, Shape, UnsafeRandomAccessByRef},
+    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
 
 /// Geometry of a serial grid
@@ -234,12 +233,13 @@ impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorSingleElement
 #[cfg(test)]
 mod test {
     use crate::grid_impl::single_element_grid::geometry::*;
+    use crate::types::ReferenceCellType;
     use approx::*;
     use bempp_element::element::{create_element, ElementFamily};
     use bempp_traits::element::Continuity;
     use rlst_dense::{
         rlst_dynamic_array2,
-        traits::{RandomAccessMut, RawAccessMut},
+        traits::{RandomAccessMut, RawAccess, RawAccessMut},
     };
 
     fn example_geometry_2d() -> SerialSingleElementGeometry<f64> {

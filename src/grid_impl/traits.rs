@@ -4,7 +4,6 @@ use crate::reference_cell::ReferenceCellType;
 use crate::types::CellLocalIndexPair;
 use bempp_traits::element::FiniteElement;
 use num::Float;
-use rlst_dense::traits::{RandomAccessByRef, RawAccess, Shape};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Ownership {

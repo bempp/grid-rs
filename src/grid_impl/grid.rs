@@ -9,7 +9,6 @@ use crate::types::CellLocalIndexPair;
 use bempp_traits::element::FiniteElement;
 use num::Float;
 use rlst_common::types::Scalar;
-use rlst_dense::rlst_array_from_slice2;
 use std::iter::Copied;
 
 pub struct Point<'a, T: Float, G: Geometry> {
