@@ -299,13 +299,9 @@ where
         &'a self,
         reference_points: &'a [Self::T],
     ) -> Self::ReferenceMap<'a> {
-        let gdim = self.geometry().dim();
-        let npts = reference_points.len() / gdim;
-        let rlst_reference_points =
-            rlst_array_from_slice2!(T, reference_points, [npts, gdim], [gdim, 1]);
         Self::ReferenceMap {
             grid: self,
-            evaluator: self.geometry().get_evaluator(&rlst_reference_points),
+            evaluator: self.geometry().get_evaluator(reference_points),
         }
     }
 

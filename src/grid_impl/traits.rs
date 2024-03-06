@@ -4,7 +4,7 @@ use crate::reference_cell::ReferenceCellType;
 use crate::types::CellLocalIndexPair;
 use bempp_traits::element::FiniteElement;
 use num::Float;
-use rlst_dense::traits::{RandomAccessByRef, Shape};
+use rlst_dense::traits::{RandomAccessByRef, RawAccess, Shape};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Ownership {
@@ -93,7 +93,7 @@ pub trait Geometry {
     /// Get the `i`th element
     fn element(&self, i: usize) -> Option<&Self::Element>;
     /// Get the cells associated with the `i`th element
-    fn cells(&self, i: usize) -> Option<&[usize]>;
+    fn cell_indices(&self, i: usize) -> Option<&[Self::IndexType]>;
 
     // ... or would it be better to replace the above 3 functions with an Iter?
     // fn elements_and_cells(&self) -> std::slice::Iter<'_, (&Self::Element, &[usize])>;
@@ -108,10 +108,7 @@ pub trait Geometry {
     fn volume(&self, index: Self::IndexType) -> Self::T;
 
     /// Get the geometry evaluator for the given points
-    fn get_evaluator<'a, Points: RandomAccessByRef<2, Item = Self::T> + Shape<2>>(
-        &'a self,
-        points: &Points,
-    ) -> Self::Evaluator<'a>;
+    fn get_evaluator<'a>(&'a self, points: &'a [Self::T]) -> Self::Evaluator<'a>;
 }
 
 /// Geometry evaluator

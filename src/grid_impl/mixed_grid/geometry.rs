@@ -12,7 +12,7 @@ use rlst_dense::{
     base_array::BaseArray,
     data_container::VectorContainer,
     rlst_array_from_slice2, rlst_dynamic_array4,
-    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
+    traits::{RandomAccessByRef, RawAccess, Shape, UnsafeRandomAccessByRef},
 };
 
 /// Geometry of a serial grid
@@ -25,6 +25,7 @@ pub struct SerialMixedGeometry<T: Float + Scalar> {
     midpoints: Vec<Vec<Vec<T>>>,
     diameters: Vec<Vec<T>>,
     volumes: Vec<Vec<T>>,
+    cell_indices: Vec<Vec<(usize, usize)>>,
 }
 
 unsafe impl<T: Float + Scalar> Sync for SerialMixedGeometry<T> {}
@@ -39,20 +40,24 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
         let dim = coordinates.shape()[1];
         let mut index_map = vec![(0, 0); cell_elements.len()];
         let mut cells = vec![];
+        let mut cell_indices = vec![];
 
         for (element_index, _e) in elements.iter().enumerate() {
-            let mut e_cells = vec![];
             let mut start = 0;
+
+            cells.push(vec![]);
+            cell_indices.push(vec![]);
 
             for (cell_i, element_i) in cell_elements.iter().enumerate() {
                 let size = elements[*element_i].dim();
                 if *element_i == element_index {
-                    index_map[cell_i] = (element_index, e_cells.len() / size);
-                    e_cells.extend_from_slice(&cells_input[start..start + size]);
+                    let cell_index = (element_index, cell_indices[element_index].len());
+                    index_map[cell_i] = cell_index;
+                    cell_indices[element_index].push(cell_index);
+                    cells[element_index].extend_from_slice(&cells_input[start..start + size]);
                 }
                 start += size;
             }
-            cells.push(e_cells);
         }
 
         let mut midpoints = vec![vec![]; cell_elements.len()];
@@ -100,6 +105,7 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
             midpoints,
             diameters,
             volumes,
+            cell_indices,
         }
     }
 }
@@ -165,9 +171,9 @@ impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
             None
         }
     }
-    fn cells(&self, i: usize) -> Option<&[usize]> {
+    fn cell_indices(&self, i: usize) -> Option<&[Self::IndexType]> {
         if i < self.cells.len() {
-            Some(&self.cells[i])
+            Some(&self.cell_indices[i])
         } else {
             None
         }
@@ -184,10 +190,7 @@ impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
         self.volumes[index.0][index.1]
     }
 
-    fn get_evaluator<'a, Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
-        &'a self,
-        points: &Points,
-    ) -> Self::Evaluator<'a> {
+    fn get_evaluator<'a>(&'a self, points: &'a [Self::T]) -> Self::Evaluator<'a> {
         GeometryEvaluatorMixed::new(self, points)
     }
 }
@@ -199,17 +202,17 @@ pub struct GeometryEvaluatorMixed<'a, T: Float + Scalar> {
 }
 
 impl<'a, T: Float + Scalar> GeometryEvaluatorMixed<'a, T> {
-    fn new<Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
-        geometry: &'a SerialMixedGeometry<T>,
-        points: &Points,
-    ) -> Self {
+    fn new(geometry: &'a SerialMixedGeometry<T>, points: &'a [T]) -> Self {
         let tdim = reference_cell::dim(geometry.elements[0].cell_type());
-        assert_eq!(tdim, points.shape()[1]);
+        assert_eq!(points.len() % tdim, 0);
+        let npoints = points.len() / tdim;
+        let rlst_points = rlst_array_from_slice2!(T, points, [tdim, npoints]);
+
         let mut tables = vec![];
         for e in &geometry.elements {
             assert_eq!(reference_cell::dim(e.cell_type()), tdim);
-            let mut table = rlst_dynamic_array4!(T, e.tabulate_array_shape(1, points.shape()[0]));
-            e.tabulate(points, 1, &mut table);
+            let mut table = rlst_dynamic_array4!(T, e.tabulate_array_shape(1, npoints));
+            e.tabulate(&rlst_points, 1, &mut table);
             tables.push(table);
         }
         Self {

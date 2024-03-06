@@ -3,6 +3,7 @@
 use crate::grid_impl::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
 use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
+use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
@@ -12,7 +13,7 @@ use rlst_dense::{
     base_array::BaseArray,
     data_container::VectorContainer,
     rlst_array_from_slice2, rlst_dynamic_array4,
-    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
+    traits::{RandomAccessByRef, RawAccess, Shape, UnsafeRandomAccessByRef},
 };
 
 /// Geometry of a serial grid
@@ -25,6 +26,7 @@ pub struct SerialSingleElementGeometry<T: Float + Scalar> {
     midpoints: Vec<Vec<T>>,
     diameters: Vec<T>,
     volumes: Vec<T>,
+    cell_indices: Vec<usize>,
 }
 
 unsafe impl<T: Float + Scalar> Sync for SerialSingleElementGeometry<T> {}
@@ -73,6 +75,8 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
         }
         cells.extend_from_slice(cells_input);
 
+        let cell_indices = (0..ncells).collect::<Vec<_>>();
+
         Self {
             dim,
             index_map,
@@ -82,6 +86,7 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
             midpoints,
             diameters,
             volumes,
+            cell_indices,
         }
     }
 }
@@ -133,15 +138,15 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
         1
     }
     fn element(&self, i: usize) -> Option<&Self::Element> {
-        if i < self.cell_count() {
+        if i == 0 {
             Some(&self.element)
         } else {
             None
         }
     }
-    fn cells(&self, i: usize) -> Option<&[usize]> {
+    fn cell_indices(&self, i: usize) -> Option<&[usize]> {
         if i == 0 {
-            Some(&self.cells)
+            Some(&self.cell_indices)
         } else {
             None
         }
@@ -158,10 +163,7 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
         self.volumes[index]
     }
 
-    fn get_evaluator<'a, Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
-        &'a self,
-        points: &Points,
-    ) -> GeometryEvaluatorSingleElement<'a, T> {
+    fn get_evaluator<'a>(&'a self, points: &'a [Self::T]) -> GeometryEvaluatorSingleElement<'a, T> {
         GeometryEvaluatorSingleElement::<T>::new(self, points)
     }
 }
@@ -173,17 +175,14 @@ pub struct GeometryEvaluatorSingleElement<'a, T: Float + Scalar> {
 }
 
 impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
-    fn new<Points: RandomAccessByRef<2, Item = T> + Shape<2>>(
-        geometry: &'a SerialSingleElementGeometry<T>,
-        points: &Points,
-    ) -> Self {
+    fn new(geometry: &'a SerialSingleElementGeometry<T>, points: &'a [T]) -> Self {
         let tdim = reference_cell::dim(geometry.element.cell_type());
-        assert_eq!(tdim, points.shape()[1]);
-        let mut table = rlst_dynamic_array4!(
-            T,
-            geometry.element.tabulate_array_shape(1, points.shape()[0])
-        );
-        geometry.element.tabulate(points, 1, &mut table);
+        assert_eq!(points.len() % tdim, 0);
+        let npoints = points.len() / tdim;
+        let rlst_points = rlst_array_from_slice2!(T, points, [tdim, npoints]);
+
+        let mut table = rlst_dynamic_array4!(T, geometry.element.tabulate_array_shape(1, npoints));
+        geometry.element.tabulate(&rlst_points, 1, &mut table);
         Self {
             geometry,
             tdim,
@@ -246,7 +245,7 @@ mod test {
     fn example_geometry_2d() -> SerialSingleElementGeometry<f64> {
         let p1triangle = create_element(
             ElementFamily::Lagrange,
-            bempp_element::cell::ReferenceCellType::Triangle,
+            ReferenceCellType::Triangle,
             1,
             Continuity::Continuous,
         );
@@ -265,7 +264,7 @@ mod test {
     fn example_geometry_3d() -> SerialSingleElementGeometry<f64> {
         let p2triangle = create_element(
             ElementFamily::Lagrange,
-            bempp_element::cell::ReferenceCellType::Triangle,
+            ReferenceCellType::Triangle,
             2,
             Continuity::Continuous,
         );
@@ -344,7 +343,7 @@ mod test {
         let g = example_geometry_2d();
         let points = triangle_points();
 
-        let evaluator = g.get_evaluator(&points);
+        let evaluator = g.get_evaluator(points.data());
         let mut mapped_point = vec![0.0; 2];
         for (cell_i, points) in [
             vec![vec![0.7, 0.5], vec![0.7, 0.1]],
@@ -366,7 +365,7 @@ mod test {
     fn test_compute_point_3d() {
         let g = example_geometry_3d();
         let points = triangle_points();
-        let evaluator = g.get_evaluator(&points);
+        let evaluator = g.get_evaluator(points.data());
 
         let mut mapped_point = vec![0.0; 3];
         for (cell_i, points) in [
@@ -389,7 +388,7 @@ mod test {
     fn test_compute_jacobian_3d() {
         let g = example_geometry_3d();
         let points = triangle_points();
-        let evaluator = g.get_evaluator(&points);
+        let evaluator = g.get_evaluator(points.data());
 
         let mut computed_jacobian = rlst_dynamic_array2!(f64, [3, 2]);
         for (cell_i, jacobians) in [
@@ -423,7 +422,7 @@ mod test {
     fn test_compute_normal_3d() {
         let g = example_geometry_3d();
         let points = triangle_points();
-        let evaluator = g.get_evaluator(&points);
+        let evaluator = g.get_evaluator(points.data());
 
         let mut computed_normal = vec![0.0; 3];
         for (cell_i, normals) in [
