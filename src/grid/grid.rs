@@ -326,7 +326,7 @@ mod test {
     use super::*;
     use crate::grid::flat_triangle_grid::SerialFlatTriangleGridBuilder;
     use crate::grid::mixed_grid::SerialMixedGrid;
-    use crate::grid::single_element_grid::SerialSingleElementGrid;
+    use crate::grid::single_element_grid::SerialSingleElementGridBuilder;
     use crate::traits::builder::Builder;
     use rlst_dense::{rlst_dynamic_array2, traits::RandomAccessMut};
 
@@ -406,40 +406,19 @@ mod test {
 
     #[test]
     fn test_grid_single_element() {
-        let mut points = rlst_dynamic_array2!(f64, [9, 3]);
-        *points.get_mut([0, 0]).unwrap() = 0.0;
-        *points.get_mut([0, 1]).unwrap() = 0.0;
-        *points.get_mut([0, 2]).unwrap() = 0.0;
-        *points.get_mut([1, 0]).unwrap() = 0.5;
-        *points.get_mut([1, 1]).unwrap() = 0.0;
-        *points.get_mut([1, 2]).unwrap() = 0.2;
-        *points.get_mut([2, 0]).unwrap() = 1.0;
-        *points.get_mut([2, 1]).unwrap() = 0.0;
-        *points.get_mut([2, 2]).unwrap() = 0.0;
-        *points.get_mut([3, 0]).unwrap() = 0.0;
-        *points.get_mut([3, 1]).unwrap() = 0.5;
-        *points.get_mut([3, 2]).unwrap() = 0.0;
-        *points.get_mut([4, 0]).unwrap() = 0.5;
-        *points.get_mut([4, 1]).unwrap() = 0.5;
-        *points.get_mut([4, 2]).unwrap() = 0.0;
-        *points.get_mut([5, 0]).unwrap() = 1.0;
-        *points.get_mut([5, 1]).unwrap() = 0.5;
-        *points.get_mut([5, 2]).unwrap() = 0.0;
-        *points.get_mut([6, 0]).unwrap() = 0.0;
-        *points.get_mut([6, 1]).unwrap() = 1.0;
-        *points.get_mut([6, 2]).unwrap() = 0.0;
-        *points.get_mut([7, 0]).unwrap() = 0.5;
-        *points.get_mut([7, 1]).unwrap() = 1.0;
-        *points.get_mut([7, 2]).unwrap() = 0.0;
-        *points.get_mut([8, 0]).unwrap() = 1.0;
-        *points.get_mut([8, 1]).unwrap() = 1.0;
-        *points.get_mut([8, 2]).unwrap() = 0.0;
-        let grid = SerialSingleElementGrid::<f64>::new(
-            points,
-            &[0, 2, 6, 4, 3, 1, 2, 8, 6, 7, 4, 5],
-            ReferenceCellType::Triangle,
-            2,
-        );
+        let mut b = SerialSingleElementGridBuilder::<3, f64>::new((ReferenceCellType::Triangle, 2));
+        b.add_point(0, [0.0, 0.0, 0.0]);
+        b.add_point(1, [0.5, 0.0, 0.2]);
+        b.add_point(2, [1.0, 0.0, 0.0]);
+        b.add_point(3, [0.0, 0.5, 0.0]);
+        b.add_point(4, [0.5, 0.5, 0.0]);
+        b.add_point(5, [1.0, 0.5, 0.0]);
+        b.add_point(6, [0.0, 1.0, 0.0]);
+        b.add_point(7, [0.5, 1.0, 0.0]);
+        b.add_point(8, [1.0, 1.0, 0.0]);
+        b.add_cell(0, vec![0, 2, 6, 4, 3, 1]);
+        b.add_cell(0, vec![2, 8, 6, 7, 4, 5]);
+        let grid = b.create_grid();
 
         assert_eq!(grid.number_of_vertices(), 4);
         assert_eq!(grid.number_of_points(), 9);
