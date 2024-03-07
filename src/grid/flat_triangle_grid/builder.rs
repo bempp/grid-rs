@@ -68,7 +68,7 @@ where
         self.cells.extend_from_slice(&cell_data);
     }
 
-    fn create_grid(&self) -> Self::GridType {
+    fn create_grid(self) -> Self::GridType {
         // TODO: remove this transposing
         let npts = self.point_indices_to_ids.len();
         let mut points = rlst_dynamic_array2!(T, [npts, 3]);

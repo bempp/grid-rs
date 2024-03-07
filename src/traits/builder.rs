@@ -22,5 +22,5 @@ pub trait Builder<const GDIM: usize> {
     fn add_cell(&mut self, id: usize, cell_data: Self::CellData);
 
     /// Create the grid
-    fn create_grid(&self) -> Self::GridType;
+    fn create_grid(self) -> Self::GridType;
 }
