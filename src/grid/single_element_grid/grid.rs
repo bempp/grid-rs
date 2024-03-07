@@ -46,37 +46,25 @@ impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
             start += npoints;
         }
 
-        // Create the topology
         let topology = SerialSingleElementTopology::new(&cell_vertices, cell_type);
-
-        // Create the geometry
         let geometry = SerialSingleElementGeometry::<T>::new(points, cells, element);
-
         Self { topology, geometry }
     }
 }
 
-/// A grid
 impl<T: Float + Scalar + Inverse> Grid for SerialSingleElementGrid<T> {
     type T = T;
-
-    /// The type that implements [Topology]
     type Topology = SerialSingleElementTopology;
-
-    /// The type that implements [Geometry]
     type Geometry = SerialSingleElementGeometry<T>;
 
-    /// Get the grid topology (See [Topology])
     fn topology(&self) -> &Self::Topology {
         &self.topology
     }
 
-    /// Get the grid geometry (See [Geometry])
     fn geometry(&self) -> &Self::Geometry {
         &self.geometry
     }
 
-    // Check if the grid is stored in serial
     fn is_serial(&self) -> bool {
         true
     }

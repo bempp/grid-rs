@@ -11,7 +11,7 @@ pub enum Ownership {
     Ghost(usize, usize),
 }
 
-/// The toplogy of a grid.
+/// The topology of a grid.
 ///
 /// This provides information about which mesh entities are connected to other mesh entities
 pub trait Topology {
@@ -94,9 +94,6 @@ pub trait Geometry {
     /// Get the cells associated with the `i`th element
     fn cell_indices(&self, i: usize) -> Option<&[Self::IndexType]>;
 
-    // ... or would it be better to replace the above 3 functions with an Iter?
-    // fn elements_and_cells(&self) -> std::slice::Iter<'_, (&Self::Element, &[usize])>;
-
     /// Midpoint of a cell
     fn midpoint(&self, index: Self::IndexType, point: &mut [Self::T]);
 
@@ -145,6 +142,6 @@ pub trait Grid {
     /// Get the grid geometry (See [Geometry])
     fn geometry(&self) -> &Self::Geometry;
 
-    // Check if the grid is stored in serial
+    /// Check if the grid is stored in serial
     fn is_serial(&self) -> bool;
 }

@@ -56,37 +56,26 @@ impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
             start += npoints;
         }
 
-        // Create the topology
         let topology = SerialMixedTopology::new(&cell_vertices, cell_types);
-
-        // Create the geometry
         let geometry = SerialMixedGeometry::<T>::new(points, cells, elements, &element_numbers);
 
         Self { topology, geometry }
     }
 }
 
-/// A grid
 impl<T: Float + Scalar + Inverse> Grid for SerialMixedGrid<T> {
     type T = T;
-
-    /// The type that implements [Topology]
     type Topology = SerialMixedTopology;
-
-    /// The type that implements [Geometry]
     type Geometry = SerialMixedGeometry<T>;
 
-    /// Get the grid topology (See [Topology])
     fn topology(&self) -> &Self::Topology {
         &self.topology
     }
 
-    /// Get the grid geometry (See [Geometry])
     fn geometry(&self) -> &Self::Geometry {
         &self.geometry
     }
 
-    // Check if the grid is stored in serial
     fn is_serial(&self) -> bool {
         true
     }
