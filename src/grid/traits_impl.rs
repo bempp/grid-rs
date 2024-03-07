@@ -325,51 +325,34 @@ where
 mod test {
     use super::*;
     use crate::grid::flat_triangle_grid::SerialFlatTriangleGridBuilder;
-    use crate::grid::mixed_grid::SerialMixedGrid;
+    use crate::grid::mixed_grid::SerialMixedGridBuilder;
     use crate::grid::single_element_grid::SerialSingleElementGridBuilder;
     use crate::traits::builder::Builder;
-    use rlst_dense::{rlst_dynamic_array2, traits::RandomAccessMut};
 
     #[test]
     fn test_grid_mixed_cell_type() {
-        let mut points = rlst_dynamic_array2!(f64, [9, 3]);
-        *points.get_mut([0, 0]).unwrap() = -1.0;
-        *points.get_mut([0, 1]).unwrap() = 0.0;
-        *points.get_mut([0, 2]).unwrap() = 0.0;
-        *points.get_mut([1, 0]).unwrap() = -0.5;
-        *points.get_mut([1, 1]).unwrap() = 0.0;
-        *points.get_mut([1, 2]).unwrap() = 0.2;
-        *points.get_mut([2, 0]).unwrap() = 0.0;
-        *points.get_mut([2, 1]).unwrap() = 0.0;
-        *points.get_mut([2, 2]).unwrap() = 0.0;
-        *points.get_mut([3, 0]).unwrap() = 1.0;
-        *points.get_mut([3, 1]).unwrap() = 0.0;
-        *points.get_mut([3, 2]).unwrap() = 0.0;
-        *points.get_mut([4, 0]).unwrap() = 2.0;
-        *points.get_mut([4, 1]).unwrap() = 0.0;
-        *points.get_mut([4, 2]).unwrap() = 0.0;
-        *points.get_mut([5, 0]).unwrap() = -std::f64::consts::FRAC_1_SQRT_2;
-        *points.get_mut([5, 1]).unwrap() = std::f64::consts::FRAC_1_SQRT_2;
-        *points.get_mut([5, 2]).unwrap() = 0.0;
-        *points.get_mut([6, 0]).unwrap() = 0.0;
-        *points.get_mut([6, 1]).unwrap() = 0.5;
-        *points.get_mut([6, 2]).unwrap() = 0.0;
-        *points.get_mut([7, 0]).unwrap() = 0.0;
-        *points.get_mut([7, 1]).unwrap() = 1.0;
-        *points.get_mut([7, 2]).unwrap() = 0.0;
-        *points.get_mut([8, 0]).unwrap() = 1.0;
-        *points.get_mut([8, 1]).unwrap() = 1.0;
-        *points.get_mut([8, 2]).unwrap() = 0.0;
-        let grid = SerialMixedGrid::<f64>::new(
-            points,
-            &[0, 2, 7, 6, 5, 1, 2, 3, 7, 8, 3, 4, 8],
-            &[
-                ReferenceCellType::Triangle,
-                ReferenceCellType::Quadrilateral,
-                ReferenceCellType::Triangle,
+        let mut b = SerialMixedGridBuilder::<3, f64>::new(());
+        b.add_point(0, [-1.0, 0.0, 0.0]);
+        b.add_point(1, [-0.5, 0.0, 0.2]);
+        b.add_point(2, [0.0, 0.0, 0.0]);
+        b.add_point(2, [1.0, 0.0, 0.0]);
+        b.add_point(3, [2.0, 0.0, 0.0]);
+        b.add_point(
+            5,
+            [
+                -std::f64::consts::FRAC_1_SQRT_2,
+                std::f64::consts::FRAC_1_SQRT_2,
+                0.0,
             ],
-            &[2, 1, 1],
         );
+        b.add_point(6, [0.0, 0.5, 0.0]);
+        b.add_point(7, [0.0, 1.0, 0.0]);
+        b.add_point(8, [1.0, 1.0, 0.0]);
+        b.add_cell(0, (vec![0, 2, 7, 6, 5, 1], ReferenceCellType::Triangle, 2));
+        b.add_cell(1, (vec![2, 3, 7, 8], ReferenceCellType::Quadrilateral, 1));
+        b.add_cell(2, (vec![3, 4, 8], ReferenceCellType::Triangle, 1));
+
+        let grid = b.create_grid();
 
         assert_eq!(grid.number_of_vertices(), 6);
         assert_eq!(grid.number_of_points(), 9);
