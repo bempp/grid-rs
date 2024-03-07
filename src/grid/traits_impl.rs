@@ -61,7 +61,7 @@ impl<'a, GridImpl: Grid, Iter: std::iter::Iterator<Item = usize>> std::iter::Ite
 impl<'a, T: Float, G: Geometry<T = T>> PointType for Point<'a, T, G> {
     type T = T;
     fn coords(&self, data: &mut [Self::T]) {
-        assert_eq!(data.len(), Geometry::dim(self.geometry));
+        assert_eq!(data.len(), self.geometry.dim());
         for (dim, d) in data.iter_mut().enumerate() {
             *d = *self.geometry.coordinate(self.index, dim).unwrap();
         }
@@ -170,7 +170,7 @@ where
     type PointIterator<'iter> = Self::VertexIterator<'iter> where Self: 'iter;
 
     fn physical_dimension(&self) -> usize {
-        Geometry::dim(self.geometry)
+        self.geometry.dim()
     }
 
     fn midpoint(&self, point: &mut [T]) {
@@ -212,11 +212,11 @@ impl<'a, T: Float + Scalar, GridImpl: Grid<T = T>> ReferenceMapType for Referenc
     type Grid = GridImpl;
 
     fn domain_dimension(&self) -> usize {
-        Topology::dim(self.grid.topology())
+        self.grid.topology().dim()
     }
 
     fn physical_dimension(&self) -> usize {
-        Geometry::dim(self.grid.geometry())
+        self.grid.geometry().dim()
     }
 
     fn number_of_reference_points(&self) -> usize {
@@ -361,7 +361,7 @@ mod test {
         assert_eq!(grid.number_of_points(), 9);
         assert_eq!(grid.number_of_cells(), 3);
 
-        let mut coords = vec![0.0; Geometry::dim(grid.geometry())];
+        let mut coords = vec![0.0; grid.geometry().dim()];
         for point in grid.iter_all_points() {
             point.coords(coords.as_mut_slice());
             println!("{:#?}", coords);
@@ -410,7 +410,7 @@ mod test {
         assert_eq!(grid.number_of_points(), 9);
         assert_eq!(grid.number_of_cells(), 2);
 
-        let mut coords = vec![0.0; Geometry::dim(grid.geometry())];
+        let mut coords = vec![0.0; grid.geometry().dim()];
         for point in grid.iter_all_points() {
             point.coords(coords.as_mut_slice());
             println!("{:#?}", coords);

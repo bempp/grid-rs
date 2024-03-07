@@ -262,6 +262,19 @@ impl Topology for SerialMixedTopology {
             None
         }
     }
+
+    fn vertex_index_to_id(&self, index: Self::IndexType) -> usize {
+        panic!();
+    }
+    fn cell_index_to_id(&self, index: Self::IndexType) -> usize {
+        panic!();
+    }
+    fn vertex_id_to_index(&self, id: usize) -> Self::IndexType {
+        panic!();
+    }
+    fn cell_id_to_index(&self, id: usize) -> Self::IndexType {
+        panic!();
+    }
 }
 
 #[cfg(test)]

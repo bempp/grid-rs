@@ -53,6 +53,18 @@ pub trait Topology {
 
     /// Get the ownership of a mesh entity
     fn entity_ownership(&self, dim: usize, index: Self::IndexType) -> Ownership;
+
+    /// Get the id of a vertex from its index
+    fn vertex_index_to_id(&self, index: Self::IndexType) -> usize;
+
+    /// Get the id of a cell from its index
+    fn cell_index_to_id(&self, index: Self::IndexType) -> usize;
+
+    // Get the index of a vertex from its id
+    fn vertex_id_to_index(&self, id: usize) -> Self::IndexType;
+
+    // Get the index of a cell from its id
+    fn cell_id_to_index(&self, id: usize) -> Self::IndexType;
 }
 
 /// The geometry of a grid

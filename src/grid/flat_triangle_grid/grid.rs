@@ -434,6 +434,19 @@ impl<T: Float + Scalar<Real = T>> Topology for SerialFlatTriangleGrid<T> {
             None
         }
     }
+
+    fn vertex_index_to_id(&self, index: usize) -> usize {
+        self.point_indices_to_ids[index]
+    }
+    fn cell_index_to_id(&self, index: usize) -> usize {
+        self.cell_indices_to_ids[index]
+    }
+    fn vertex_id_to_index(&self, id: usize) -> usize {
+        self.point_ids_to_indices[&id]
+    }
+    fn cell_id_to_index(&self, id: usize) -> usize {
+        self.cell_ids_to_indices[&id]
+    }
 }
 
 #[cfg(test)]
