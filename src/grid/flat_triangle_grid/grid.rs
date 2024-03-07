@@ -214,11 +214,11 @@ impl<T: Float + Scalar<Real = T>> Grid for SerialFlatTriangleGrid<T> {
     type Geometry = Self;
 
     fn topology(&self) -> &Self::Topology {
-        &self
+        self
     }
 
     fn geometry(&self) -> &Self::Geometry {
-        &self
+        self
     }
 
     fn is_serial(&self) -> bool {
@@ -365,7 +365,7 @@ impl<'a, T: Float + Scalar<Real = T>> GeometryEvaluator for GeometryEvaluatorFla
     }
 }
 
-impl<'a, T: Float + Scalar<Real = T>> Topology for SerialFlatTriangleGrid<T> {
+impl<T: Float + Scalar<Real = T>> Topology for SerialFlatTriangleGrid<T> {
     type IndexType = usize;
 
     fn dim(&self) -> usize {
