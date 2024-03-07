@@ -93,7 +93,9 @@ where
         self.cell_ids_to_indices
             .insert(id, self.cell_indices_to_ids.len());
         self.cell_indices_to_ids.push(id);
-        self.cells.extend_from_slice(&cell_data.0);
+        for id in &cell_data.0 {
+            self.cells.push(self.point_ids_to_indices[id]);
+        }
         self.cell_types.push(cell_data.1);
         self.cell_degrees.push(cell_data.2);
     }

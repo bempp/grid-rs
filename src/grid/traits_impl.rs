@@ -321,6 +321,7 @@ where
     }
 }
 
+// TODO: move these to examples/tests folder
 #[cfg(test)]
 mod test {
     use super::*;
@@ -335,8 +336,8 @@ mod test {
         b.add_point(0, [-1.0, 0.0, 0.0]);
         b.add_point(1, [-0.5, 0.0, 0.2]);
         b.add_point(2, [0.0, 0.0, 0.0]);
-        b.add_point(2, [1.0, 0.0, 0.0]);
-        b.add_point(3, [2.0, 0.0, 0.0]);
+        b.add_point(3, [1.0, 0.0, 0.0]);
+        b.add_point(4, [2.0, 0.0, 0.0]);
         b.add_point(
             5,
             [
@@ -439,12 +440,12 @@ mod test {
     #[test]
     fn test_grid_flat_triangle() {
         let mut b = SerialFlatTriangleGridBuilder::<f64>::new(());
-        b.add_point(0, [0.0, 0.0, 0.0]);
-        b.add_point(1, [1.0, 0.0, 1.0]);
-        b.add_point(2, [1.0, 1.0, 0.0]);
-        b.add_point(3, [0.0, 1.0, 0.0]);
-        b.add_cell(0, [0, 1, 2]);
+        b.add_point(1, [0.0, 0.0, 0.0]);
+        b.add_point(2, [1.0, 0.0, 1.0]);
+        b.add_point(3, [1.0, 1.0, 0.0]);
+        b.add_point(4, [0.0, 1.0, 0.0]);
         b.add_cell(0, [1, 2, 3]);
+        b.add_cell(1, [2, 3, 4]);
 
         let grid = b.create_grid();
 

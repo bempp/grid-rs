@@ -65,7 +65,9 @@ where
         self.cell_ids_to_indices
             .insert(id, self.cell_indices_to_ids.len());
         self.cell_indices_to_ids.push(id);
-        self.cells.extend_from_slice(&cell_data);
+        for id in &cell_data {
+            self.cells.push(self.point_ids_to_indices[id]);
+        }
     }
 
     fn create_grid(self) -> Self::GridType {
