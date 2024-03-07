@@ -1,12 +1,14 @@
-use crate::grid_impl::traits::{Geometry, Grid, Topology};
+use crate::grid_impl::traits::{Geometry, GeometryEvaluator, Grid, Topology};
+use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use crate::traits::{
     cell::CellType, geometry::GeometryType, grid::GridType, point::PointType,
     reference_map::ReferenceMapType, topology::TopologyType,
 };
-use crate::types::vertex_iterator::PointIterator;
 use crate::types::CellLocalIndexPair;
+use bempp_traits::element::FiniteElement;
 use num::Float;
+use rlst_common::types::Scalar;
 use std::iter::Copied;
 use std::marker::PhantomData;
 
@@ -21,13 +23,39 @@ pub struct Cell<'a, T: Float, GridImpl: Grid> {
     _t: PhantomData<T>,
 }
 pub struct CellTopology<'a, GridImpl: Grid> {
-    grid: &'a GridImpl,
+    topology: &'a <GridImpl as Grid>::Topology,
     index: <<GridImpl as Grid>::Topology as Topology>::IndexType,
 }
 pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
-    grid: &'a GridImpl,
+    geometry: &'a <GridImpl as Grid>::Geometry,
     index: <<GridImpl as Grid>::Geometry as Geometry>::IndexType,
     _t: PhantomData<T>,
+}
+pub struct ReferenceMap<'a, GridImpl: Grid> {
+    grid: &'a GridImpl,
+    evaluator: <<GridImpl as Grid>::Geometry as Geometry>::Evaluator<'a>,
+}
+pub struct PointIterator<'a, GridImpl: Grid, Iter: std::iter::Iterator<Item = usize>> {
+    iter: Iter,
+    geometry: &'a <GridImpl as Grid>::Geometry,
+}
+
+impl<'a, GridImpl: Grid, Iter: std::iter::Iterator<Item = usize>> std::iter::Iterator
+    for PointIterator<'a, GridImpl, Iter>
+{
+    type Item = Point<'a, <GridImpl as Grid>::T, <GridImpl as Grid>::Geometry>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(index) = self.iter.next() {
+            Some(Point {
+                geometry: self.geometry,
+                index,
+                _t: PhantomData,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a, T: Float, G: Geometry<T = T>> PointType for Point<'a, T, G> {
@@ -46,7 +74,7 @@ impl<'a, T: Float, G: Geometry<T = T>> PointType for Point<'a, T, G> {
     }
 }
 
-impl<'grid, T: Float, GridImpl: Grid<T = T>> CellType for Cell<'grid, T, GridImpl>
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> CellType for Cell<'grid, T, GridImpl>
 where
     GridImpl: 'grid,
 {
@@ -64,7 +92,7 @@ where
 
     fn topology(&self) -> Self::Topology<'_> {
         CellTopology::<'_, GridImpl> {
-            grid: self.grid, // TODO: replace with just topology
+            topology: self.grid.topology(),
             index: self.grid.topology().index_map()[self.index],
         }
     }
@@ -75,14 +103,14 @@ where
 
     fn geometry(&self) -> Self::Geometry<'_> {
         CellGeometry::<'_, T, GridImpl> {
-            grid: self.grid,
+            geometry: self.grid.geometry(),
             index: self.grid.geometry().index_map()[self.index],
             _t: PhantomData,
         }
     }
 }
 
-impl<'grid, GridImpl: Grid> TopologyType for CellTopology<'grid, GridImpl>
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> TopologyType for CellTopology<'grid, GridImpl>
 where
     GridImpl: 'grid,
 {
@@ -99,38 +127,36 @@ where
         Self: 'a;
 
     fn vertex_indices(&self) -> Self::VertexIndexIter<'_> {
-        self.grid
-            .topology()
-            .connectivity(self.grid.topology().dim(), self.index, 0)
+        self.topology
+            .cell_to_entities(self.index, 0)
             .unwrap()
             .iter()
             .copied()
     }
 
     fn edge_indices(&self) -> Self::EdgeIndexIter<'_> {
-        self.grid
-            .topology()
-            .connectivity(self.grid.topology().dim(), self.index, 1)
+        self.topology
+            .cell_to_entities(self.index, 1)
             .unwrap()
             .iter()
             .copied()
     }
 
     fn face_indices(&self) -> Self::FaceIndexIter<'_> {
-        self.grid
-            .topology()
-            .connectivity(self.grid.topology().dim(), self.index, 2)
+        self.topology
+            .cell_to_entities(self.index, 2)
             .unwrap()
             .iter()
             .copied()
     }
 
     fn cell_type(&self) -> ReferenceCellType {
-        self.grid.topology().cell_type(self.index).unwrap()
+        self.topology.cell_type(self.index).unwrap()
     }
 }
 
-impl<'grid, T: Float, GridImpl: Grid<T = T>> GeometryType for CellGeometry<'grid, T, GridImpl>
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> GeometryType
+    for CellGeometry<'grid, T, GridImpl>
 where
     GridImpl: 'grid,
 {
@@ -142,102 +168,89 @@ where
     type PointIterator<'iter> = Self::VertexIterator<'iter> where Self: 'iter;
 
     fn physical_dimension(&self) -> usize {
-        self.grid.geometry().dim()
+        self.geometry.dim()
     }
 
     fn midpoint(&self, point: &mut [T]) {
-        self.grid.geometry().midpoint(self.index, point)
+        self.geometry.midpoint(self.index, point)
     }
 
     fn diameter(&self) -> T {
-        self.grid.geometry().diameter(self.index)
+        self.geometry.diameter(self.index)
     }
 
     fn volume(&self) -> T {
-        self.grid.geometry().volume(self.index)
+        self.geometry.volume(self.index)
     }
 
     fn points(&self) -> Self::PointIterator<'_> {
-        panic!();
+        PointIterator {
+            iter: self
+                .geometry
+                .cell_points(self.index)
+                .unwrap()
+                .iter()
+                .copied(),
+            geometry: self.geometry,
+        }
     }
     fn vertices(&self) -> Self::VertexIterator<'_> {
-        panic!();
+        let cell_type = self.geometry.cell_element(self.index).unwrap().cell_type();
+        let nvertices = reference_cell::entity_counts(cell_type)[0];
+        PointIterator {
+            iter: self.geometry.cell_points(self.index).unwrap()[..nvertices]
+                .iter()
+                .copied(),
+            geometry: self.geometry,
+        }
     }
 }
 
-pub struct ReferenceMap<'a, GridImpl: Grid> {
-    _grid: &'a GridImpl,
-}
-
-impl<'a, GridImpl: Grid> ReferenceMapType for ReferenceMap<'a, GridImpl> {
+impl<'a, T: Float + Scalar, GridImpl: Grid<T = T>> ReferenceMapType for ReferenceMap<'a, GridImpl> {
     type Grid = GridImpl;
 
     fn domain_dimension(&self) -> usize {
-        panic!();
+        self.grid.topology().dim()
     }
 
     fn physical_dimension(&self) -> usize {
-        panic!();
+        self.grid.geometry().dim()
     }
 
     fn number_of_reference_points(&self) -> usize {
-        panic!();
+        self.evaluator.point_count()
     }
 
     fn reference_to_physical(
         &self,
-        _point_index: usize,
-        _value: &mut [<Self::Grid as GridType>::T],
+        cell_index: usize,
+        point_index: usize,
+        value: &mut [<Self::Grid as GridType>::T],
     ) {
-        panic!();
+        self.evaluator.compute_point(cell_index, point_index, value);
     }
 
-    fn jacobian(&self, _point_index: usize, _value: &mut [<Self::Grid as GridType>::T]) {
-        panic!();
+    fn jacobian(&self, cell_index: usize, point_index: usize, value: &mut [T]) {
+        self.evaluator
+            .compute_jacobian(cell_index, point_index, value);
     }
 
-    fn normal(&self, _point_index: usize, _value: &mut [<Self::Grid as GridType>::T]) {
-        panic!();
-    }
-}
-
-pub struct ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid>
-where
-    GridImpl: 'a,
-{
-    _grid: &'a GridImpl,
-    _iter: PhantomData<Iter>,
-}
-
-impl<'a, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid> Iterator
-    for ReferenceMapIterator<'a, Iter, GridImpl>
-{
-    type Item = ReferenceMap<'a, GridImpl>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        panic!();
+    fn normal(&self, cell_index: usize, point_index: usize, value: &mut [T]) {
+        self.evaluator
+            .compute_normal(cell_index, point_index, value);
     }
 }
 
-impl<'grid, T: Float, GridImpl: Grid<T = T>> GridType for GridImpl
+impl<'grid, T: Float + Scalar, GridImpl: Grid<T = T>> GridType for GridImpl
 where
     GridImpl: 'grid,
 {
     type T = T;
+    type IndexType = <<GridImpl as Grid>::Topology as Topology>::IndexType;
 
     type ReferenceMap<'a> = ReferenceMap<'a, GridImpl>
     where
         Self: 'a;
-
-    type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>> =
-        ReferenceMapIterator<'a, Iter, GridImpl>
-    where
-        Self: 'a,
-        Iter: 'a;
-
-    //  PROPOSAL:
-    //  Vertex = one of the corners of a cell
-    //  Point = a point in the geometry
 
     type Point<'a> = Point<'a, T, GridImpl::Geometry> where Self: 'a;
     type Cell<'a> = Cell<'a, T, GridImpl> where Self: 'a;
@@ -284,33 +297,27 @@ where
 
     fn reference_to_physical_map<'a>(
         &'a self,
-        _reference_points: &'a [Self::T],
-        _cell_index: usize,
+        reference_points: &'a [Self::T],
     ) -> Self::ReferenceMap<'a> {
-        panic!();
+        Self::ReferenceMap {
+            grid: self,
+            evaluator: self.geometry().get_evaluator(reference_points),
+        }
     }
 
-    fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
-        &'a self,
-        _reference_points: &'a [Self::T],
-        _iter: Iter,
-    ) -> Self::ReferenceMapIterator<'a, Iter>
-    where
-        Self: 'a,
-    {
-        panic!();
+    fn vertex_to_cells(
+        &self,
+        vertex_index: Self::IndexType,
+    ) -> &[CellLocalIndexPair<Self::IndexType>] {
+        self.topology().entity_to_cells(0, vertex_index).unwrap()
     }
 
-    fn point_to_cells(&self, _point_index: usize) -> &[CellLocalIndexPair] {
-        panic!();
+    fn edge_to_cells(&self, edge_index: Self::IndexType) -> &[CellLocalIndexPair<Self::IndexType>] {
+        self.topology().entity_to_cells(1, edge_index).unwrap()
     }
 
-    fn edge_to_cells(&self, _edge_index: usize) -> &[CellLocalIndexPair] {
-        panic!();
-    }
-
-    fn face_to_cells(&self, _face_index: usize) -> &[CellLocalIndexPair] {
-        panic!();
+    fn face_to_cells(&self, face_index: Self::IndexType) -> &[CellLocalIndexPair<Self::IndexType>] {
+        self.topology().entity_to_cells(2, face_index).unwrap()
     }
 }
 
@@ -319,40 +326,40 @@ mod test {
     use crate::grid_impl::grid::*;
     use crate::grid_impl::mixed_grid::SerialMixedGrid;
     use crate::grid_impl::single_element_grid::SerialSingleElementGrid;
+    use rlst_dense::{rlst_dynamic_array2, traits::RandomAccessMut};
 
     #[test]
     fn test_grid_mixed_cell_type() {
+        let mut points = rlst_dynamic_array2!(f64, [9, 3]);
+        *points.get_mut([0, 0]).unwrap() = -1.0;
+        *points.get_mut([0, 1]).unwrap() = 0.0;
+        *points.get_mut([0, 2]).unwrap() = 0.0;
+        *points.get_mut([1, 0]).unwrap() = -0.5;
+        *points.get_mut([1, 1]).unwrap() = 0.0;
+        *points.get_mut([1, 2]).unwrap() = 0.2;
+        *points.get_mut([2, 0]).unwrap() = 0.0;
+        *points.get_mut([2, 1]).unwrap() = 0.0;
+        *points.get_mut([2, 2]).unwrap() = 0.0;
+        *points.get_mut([3, 0]).unwrap() = 1.0;
+        *points.get_mut([3, 1]).unwrap() = 0.0;
+        *points.get_mut([3, 2]).unwrap() = 0.0;
+        *points.get_mut([4, 0]).unwrap() = 2.0;
+        *points.get_mut([4, 1]).unwrap() = 0.0;
+        *points.get_mut([4, 2]).unwrap() = 0.0;
+        *points.get_mut([5, 0]).unwrap() = -std::f64::consts::FRAC_1_SQRT_2;
+        *points.get_mut([5, 1]).unwrap() = std::f64::consts::FRAC_1_SQRT_2;
+        *points.get_mut([5, 2]).unwrap() = 0.0;
+        *points.get_mut([6, 0]).unwrap() = 0.0;
+        *points.get_mut([6, 1]).unwrap() = 0.5;
+        *points.get_mut([6, 2]).unwrap() = 0.0;
+        *points.get_mut([7, 0]).unwrap() = 0.0;
+        *points.get_mut([7, 1]).unwrap() = 1.0;
+        *points.get_mut([7, 2]).unwrap() = 0.0;
+        *points.get_mut([8, 0]).unwrap() = 1.0;
+        *points.get_mut([8, 1]).unwrap() = 1.0;
+        *points.get_mut([8, 2]).unwrap() = 0.0;
         let grid = SerialMixedGrid::<f64>::new(
-            vec![
-                -1.0,
-                0.0,
-                0.0,
-                -0.5,
-                0.0,
-                0.2,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                0.0,
-                2.0,
-                0.0,
-                0.0,
-                -std::f64::consts::FRAC_1_SQRT_2,
-                std::f64::consts::FRAC_1_SQRT_2,
-                0.0,
-                0.0,
-                0.5,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                1.0,
-                1.0,
-                0.0,
-            ],
-            3,
+            points,
             &[0, 2, 7, 6, 5, 1, 2, 3, 7, 8, 3, 4, 8],
             &[
                 ReferenceCellType::Triangle,
@@ -397,12 +404,36 @@ mod test {
 
     #[test]
     fn test_grid_single_element() {
+        let mut points = rlst_dynamic_array2!(f64, [9, 3]);
+        *points.get_mut([0, 0]).unwrap() = 0.0;
+        *points.get_mut([0, 1]).unwrap() = 0.0;
+        *points.get_mut([0, 2]).unwrap() = 0.0;
+        *points.get_mut([1, 0]).unwrap() = 0.5;
+        *points.get_mut([1, 1]).unwrap() = 0.0;
+        *points.get_mut([1, 2]).unwrap() = 0.2;
+        *points.get_mut([2, 0]).unwrap() = 1.0;
+        *points.get_mut([2, 1]).unwrap() = 0.0;
+        *points.get_mut([2, 2]).unwrap() = 0.0;
+        *points.get_mut([3, 0]).unwrap() = 0.0;
+        *points.get_mut([3, 1]).unwrap() = 0.5;
+        *points.get_mut([3, 2]).unwrap() = 0.0;
+        *points.get_mut([4, 0]).unwrap() = 0.5;
+        *points.get_mut([4, 1]).unwrap() = 0.5;
+        *points.get_mut([4, 2]).unwrap() = 0.0;
+        *points.get_mut([5, 0]).unwrap() = 1.0;
+        *points.get_mut([5, 1]).unwrap() = 0.5;
+        *points.get_mut([5, 2]).unwrap() = 0.0;
+        *points.get_mut([6, 0]).unwrap() = 0.0;
+        *points.get_mut([6, 1]).unwrap() = 1.0;
+        *points.get_mut([6, 2]).unwrap() = 0.0;
+        *points.get_mut([7, 0]).unwrap() = 0.5;
+        *points.get_mut([7, 1]).unwrap() = 1.0;
+        *points.get_mut([7, 2]).unwrap() = 0.0;
+        *points.get_mut([8, 0]).unwrap() = 1.0;
+        *points.get_mut([8, 1]).unwrap() = 1.0;
+        *points.get_mut([8, 2]).unwrap() = 0.0;
         let grid = SerialSingleElementGrid::<f64>::new(
-            vec![
-                0.0, 0.0, 0.0, 0.5, 0.0, 0.2, 1.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.0, 1.0,
-                0.5, 0.0, 0.0, 1.0, 0.0, 0.5, 1.0, 0.0, 1.0, 1.0, 0.0,
-            ],
-            3,
+            points,
             &[0, 2, 6, 4, 3, 1, 2, 8, 6, 7, 4, 5],
             ReferenceCellType::Triangle,
             2,

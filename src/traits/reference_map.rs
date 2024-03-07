@@ -15,13 +15,28 @@ pub trait ReferenceMapType {
 
     /// Defines an iterator that returns a slice with the value of the
     /// physical point for each reference point.
-    fn reference_to_physical(&self, point_index: usize, value: &mut [<Self::Grid as GridType>::T]);
+    fn reference_to_physical(
+        &self,
+        cell_index: usize,
+        point_index: usize,
+        value: &mut [<Self::Grid as GridType>::T],
+    );
 
     /// Defines an iterator that returns a slice with the value of the
     /// Jacobian at the physical point for each reference point.
-    fn jacobian(&self, point_index: usize, value: &mut [<Self::Grid as GridType>::T]);
+    fn jacobian(
+        &self,
+        cell_index: usize,
+        point_index: usize,
+        value: &mut [<Self::Grid as GridType>::T],
+    );
 
     /// Defines an iterator that returns a slice with the normal direction
     /// at each point.
-    fn normal(&self, point_index: usize, value: &mut [<Self::Grid as GridType>::T]);
+    fn normal(
+        &self,
+        cell_index: usize,
+        point_index: usize,
+        value: &mut [<Self::Grid as GridType>::T],
+    );
 }

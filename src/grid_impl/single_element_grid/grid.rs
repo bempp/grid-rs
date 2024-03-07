@@ -6,37 +6,32 @@ use crate::grid_impl::single_element_grid::{
 use crate::grid_impl::traits::Grid;
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
-use bempp_element::element::{create_element, ElementFamily};
+use bempp_element::element::{create_element, ElementFamily, Inverse};
 use bempp_traits::element::{Continuity, FiniteElement};
+use log::warn;
 use num::Float;
+use rlst_common::types::Scalar;
+use rlst_dense::{array::Array, base_array::BaseArray, data_container::VectorContainer};
 
 /// A serial grid
-pub struct SerialSingleElementGrid<T: Float> {
+pub struct SerialSingleElementGrid<T: Float + Scalar> {
     topology: SerialSingleElementTopology,
     geometry: SerialSingleElementGeometry<T>,
 }
 
-impl<T: Float> SerialSingleElementGrid<T> {
+impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
     pub fn new(
-        points: Vec<T>,
-        gdim: usize,
+        points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells: &[usize],
         cell_type: ReferenceCellType,
         cell_degree: usize,
     ) -> Self {
-        let element = create_element(
+        if cell_type == ReferenceCellType::Triangle && cell_degree == 1 {
+            warn!("Creating a single element grid with a P1 triangle. Using a FlatTriangleGrid would be faster.");
+        }
+        let element = create_element::<T>(
             ElementFamily::Lagrange,
-            // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
-            match cell_type {
-                ReferenceCellType::Interval => bempp_element::cell::ReferenceCellType::Interval,
-                ReferenceCellType::Triangle => bempp_element::cell::ReferenceCellType::Triangle,
-                ReferenceCellType::Quadrilateral => {
-                    bempp_element::cell::ReferenceCellType::Quadrilateral
-                }
-                _ => {
-                    panic!("Unsupported cell type: {:?}", cell_type);
-                }
-            },
+            cell_type,
             cell_degree,
             Continuity::Continuous,
         );
@@ -55,14 +50,14 @@ impl<T: Float> SerialSingleElementGrid<T> {
         let topology = SerialSingleElementTopology::new(&cell_vertices, cell_type);
 
         // Create the geometry
-        let geometry = SerialSingleElementGeometry::<T>::new(points, gdim, cells, element);
+        let geometry = SerialSingleElementGeometry::<T>::new(points, cells, element);
 
         Self { topology, geometry }
     }
 }
 
 /// A grid
-impl<T: Float> Grid for SerialSingleElementGrid<T> {
+impl<T: Float + Scalar + Inverse> Grid for SerialSingleElementGrid<T> {
     type T = T;
 
     /// The type that implements [Topology]

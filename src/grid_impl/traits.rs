@@ -1,6 +1,7 @@
 //! Traits used in the implementation of a grid
 
 use crate::reference_cell::ReferenceCellType;
+use crate::types::CellLocalIndexPair;
 use bempp_traits::element::FiniteElement;
 use num::Float;
 
@@ -37,23 +38,21 @@ pub trait Topology {
     /// All entity types of the given dimension that are included in the grid
     fn entity_types(&self, dim: usize) -> &[ReferenceCellType];
 
-    /// Get the indices of entities and types of entities that are connected to each cell of type `cell_type`
-    fn cell_entities(&self, cell_type: ReferenceCellType, dim: usize)
-        -> Option<&[Self::IndexType]>;
+    /// Get the indices of entities of dimension `dim` that are connected to the cell with index `index`
+    fn cell_to_entities(&self, index: Self::IndexType, dim: usize) -> Option<&[Self::IndexType]>;
 
-    /// Get the indices and types of entities of dimension `dim1` that are connected to the entity of dimension `dim0` with index `index`
-    fn connectivity(
+    /// Get the indices of entities of cell that are connected to the entity with dimension `dim` and index `index`
+    fn entity_to_cells(
         &self,
-        dim0: usize,
+        dim: usize,
         index: Self::IndexType,
-        dim1: usize,
-    ) -> Option<&[Self::IndexType]>;
+    ) -> Option<&[CellLocalIndexPair<Self::IndexType>]>;
+
+    /// Get the indices of the vertices that are connect to theentity with dimension `dim` and index `index`
+    fn entity_vertices(&self, dim: usize, index: Self::IndexType) -> Option<&[Self::IndexType]>;
 
     /// Get the ownership of a mesh entity
     fn entity_ownership(&self, dim: usize, index: Self::IndexType) -> Ownership;
-
-    /// Extract a flat index from an IndexType
-    fn extract_index(&self, index: Self::IndexType) -> usize;
 }
 
 /// The geometry of a grid
@@ -63,6 +62,9 @@ pub trait Geometry {
     type IndexType: std::fmt::Debug + Eq + Copy;
     type T: Float;
     type Element: FiniteElement;
+    type Evaluator<'a>: GeometryEvaluator<T = Self::T>
+    where
+        Self: 'a;
 
     /// The geometric dimension
     fn dim(&self) -> usize;
@@ -90,7 +92,7 @@ pub trait Geometry {
     /// Get the `i`th element
     fn element(&self, i: usize) -> Option<&Self::Element>;
     /// Get the cells associated with the `i`th element
-    fn cells(&self, i: usize) -> Option<&[usize]>;
+    fn cell_indices(&self, i: usize) -> Option<&[Self::IndexType]>;
 
     // ... or would it be better to replace the above 3 functions with an Iter?
     // fn elements_and_cells(&self) -> std::slice::Iter<'_, (&Self::Element, &[usize])>;
@@ -103,6 +105,28 @@ pub trait Geometry {
 
     /// Volume of a cell
     fn volume(&self, index: Self::IndexType) -> Self::T;
+
+    /// Get the geometry evaluator for the given points
+    fn get_evaluator<'a>(&'a self, points: &'a [Self::T]) -> Self::Evaluator<'a>;
+}
+
+/// Geometry evaluator
+///
+/// A geometry evaluator can compute points and jacobians on physical cells
+pub trait GeometryEvaluator {
+    type T: Float;
+
+    /// The number of points on the reference cell used by this evaluator
+    fn point_count(&self) -> usize;
+
+    /// Compute a point on a physical cell
+    fn compute_point(&self, cell_index: usize, point_index: usize, point: &mut [Self::T]);
+
+    /// Compute a jacobian on a physical cell
+    fn compute_jacobian(&self, cell_index: usize, point_index: usize, jacobian: &mut [Self::T]);
+
+    /// Compute a normal on a physical cell
+    fn compute_normal(&self, cell_index: usize, point_index: usize, normal: &mut [Self::T]);
 }
 
 /// A grid

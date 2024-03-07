@@ -4,20 +4,22 @@ use crate::grid_impl::mixed_grid::{geometry::SerialMixedGeometry, topology::Seri
 use crate::grid_impl::traits::Grid;
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
-use bempp_element::element::{create_element, ElementFamily};
+use bempp_element::element::{create_element, ElementFamily, Inverse};
 use bempp_traits::element::{Continuity, FiniteElement};
+use log::warn;
 use num::Float;
+use rlst_common::types::Scalar;
+use rlst_dense::{array::Array, base_array::BaseArray, data_container::VectorContainer};
 
 /// A serial grid
-pub struct SerialMixedGrid<T: Float> {
+pub struct SerialMixedGrid<T: Float + Scalar> {
     topology: SerialMixedTopology,
     geometry: SerialMixedGeometry<T>,
 }
 
-impl<T: Float> SerialMixedGrid<T> {
+impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
     pub fn new(
-        points: Vec<T>,
-        gdim: usize,
+        points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells: &[usize],
         cell_types: &[ReferenceCellType],
         cell_degrees: &[usize],
@@ -36,32 +38,12 @@ impl<T: Float> SerialMixedGrid<T> {
         let elements = element_info
             .iter()
             .map(|(i, j)| {
-                create_element(
-                    ElementFamily::Lagrange,
-                    // TODO: remove this match once bempp-rs and grid-rs use the same ReferenceCellType
-                    match i {
-                        ReferenceCellType::Interval => {
-                            bempp_element::cell::ReferenceCellType::Interval
-                        }
-                        ReferenceCellType::Triangle => {
-                            bempp_element::cell::ReferenceCellType::Triangle
-                        }
-                        ReferenceCellType::Quadrilateral => {
-                            bempp_element::cell::ReferenceCellType::Quadrilateral
-                        }
-                        _ => {
-                            panic!("Unsupported cell type: {:?}", i);
-                        }
-                    },
-                    *j,
-                    Continuity::Continuous,
-                )
+                create_element::<T>(ElementFamily::Lagrange, *i, *j, Continuity::Continuous)
             })
             .collect::<Vec<_>>();
 
         if elements.len() == 1 {
-            println!("Creating a mixed grid with only one element. Using a SerialSingleElementGrid would be faster.");
-            // TODO: make into a warning
+            warn!("Creating a mixed grid with only one element. Using a SerialSingleElementGrid would be faster.");
         }
 
         let mut cell_vertices = vec![];
@@ -78,15 +60,14 @@ impl<T: Float> SerialMixedGrid<T> {
         let topology = SerialMixedTopology::new(&cell_vertices, cell_types);
 
         // Create the geometry
-        let geometry =
-            SerialMixedGeometry::<T>::new(points, gdim, cells, elements, &element_numbers);
+        let geometry = SerialMixedGeometry::<T>::new(points, cells, elements, &element_numbers);
 
         Self { topology, geometry }
     }
 }
 
 /// A grid
-impl<T: Float> Grid for SerialMixedGrid<T> {
+impl<T: Float + Scalar + Inverse> Grid for SerialMixedGrid<T> {
     type T = T;
 
     /// The type that implements [Topology]

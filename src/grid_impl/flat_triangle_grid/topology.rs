@@ -4,27 +4,10 @@ use crate::grid_impl::traits::{Ownership, Topology};
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use crate::types::CellLocalIndexPair;
-
-fn all_equal<T: Eq>(a: &[T], b: &[T]) -> bool {
-    if a.len() != b.len() {
-        false
-    } else {
-        all_in(a, b)
-    }
-}
-
-fn all_in<T: Eq>(a: &[T], b: &[T]) -> bool {
-    for i in a {
-        if !b.contains(i) {
-            return false;
-        }
-    }
-    true
-}
+use std::collections::HashMap;
 
 /// Topology of a serial grid
-pub struct SerialSingleElementTopology {
-    dim: usize,
+pub struct SerialFlatTriangleTopology {
     index_map: Vec<usize>,
     entities_to_vertices: Vec<Vec<Vec<usize>>>,
     cells_to_entities: Vec<Vec<Vec<usize>>>,
@@ -32,87 +15,65 @@ pub struct SerialSingleElementTopology {
     entity_types: Vec<ReferenceCellType>,
 }
 
-unsafe impl Sync for SerialSingleElementTopology {}
+unsafe impl Sync for SerialFlatTriangleTopology {}
 
-impl SerialSingleElementTopology {
-    pub fn new(cells_input: &[usize], cell_type: ReferenceCellType) -> Self {
-        let size = reference_cell::entity_counts(cell_type)[0];
-        let ncells = cells_input.len() / size;
+impl SerialFlatTriangleTopology {
+    pub fn new(cells: &[usize]) -> Self {
+        let ncells = cells.len() / 3;
+        let nvertices = *cells.iter().max().unwrap() + 1;
 
         let mut index_map = vec![0; ncells];
-        let mut vertices = vec![];
-        let dim = reference_cell::dim(cell_type);
 
-        let entity_types = reference_cell::entity_types(cell_type)
-            .iter()
-            .filter(|t| !t.is_empty())
-            .map(|t| t[0])
-            .collect::<Vec<_>>();
+        let entity_types = vec![
+            ReferenceCellType::Point,
+            ReferenceCellType::Interval,
+            ReferenceCellType::Triangle,
+        ];
 
-        let mut cells_to_entities = vec![vec![vec![]; ncells]; dim + 1];
-        let mut entities_to_cells = vec![vec![]; dim + 1];
-        let mut entities_to_vertices = vec![vec![]; dim];
+        let mut cells_to_entities = vec![vec![vec![]; ncells]; 3];
+        let mut entities_to_cells = vec![vec![]; 3];
+        let mut entities_to_vertices = vec![vec![]; 2];
 
-        entities_to_cells[dim] = vec![vec![]; ncells];
+        let mut edge_indices = HashMap::new();
 
-        let mut start = 0;
+        entities_to_cells[2] = vec![vec![]; ncells];
+        entities_to_vertices[0] = (0..nvertices).map(|i| vec![i]).collect::<Vec<_>>();
+        entities_to_cells[0] = vec![vec![]; nvertices];
+
         for (cell_i, i) in index_map.iter_mut().enumerate() {
-            let cell = &cells_input[start..start + size];
+            let cell = &cells[cell_i * 3..(cell_i + 1) * 3];
             *i = cell_i;
-            let mut row = vec![];
-            for v in cell {
-                if !vertices.contains(v) {
-                    entities_to_cells[0].push(vec![]);
-                    vertices.push(*v);
-                }
-                row.push(vertices.iter().position(|&r| r == *v).unwrap());
-            }
-
-            for (local_index, v) in row.iter().enumerate() {
+            for (local_index, v) in cell.iter().enumerate() {
                 entities_to_cells[0][*v].push(CellLocalIndexPair::new(cell_i, local_index));
             }
-            entities_to_cells[dim][cell_i] = vec![CellLocalIndexPair::new(cell_i, 0)];
-
-            cells_to_entities[0][cell_i] = row;
-            cells_to_entities[dim][cell_i] = vec![cell_i];
-
-            start += size;
+            entities_to_cells[2][cell_i] = vec![CellLocalIndexPair::new(cell_i, 0)];
+            cells_to_entities[0][cell_i].extend_from_slice(cell);
+            cells_to_entities[2][cell_i] = vec![cell_i];
         }
 
-        for i in 0..vertices.len() {
-            entities_to_vertices[0].push(vec![i]);
-        }
-        for d in 1..dim {
-            let mut c_to_e = vec![];
-            let ref_conn = &reference_cell::connectivity(cell_type)[d];
-            for (cell_i, cell) in cells_to_entities[0].iter().enumerate() {
-                let mut entity_ids = vec![];
-                for (local_index, rc) in ref_conn.iter().enumerate() {
-                    let vertices = rc[0].iter().map(|x| cell[*x]).collect::<Vec<_>>();
-                    let mut found = false;
-                    for (entity_index, entity) in entities_to_vertices[d].iter().enumerate() {
-                        if all_equal(entity, &vertices) {
-                            entity_ids.push(entity_index);
-                            entities_to_cells[d][entity_index]
-                                .push(CellLocalIndexPair::new(cell_i, local_index));
-                            found = true;
-                            break;
-                        }
-                    }
-                    if !found {
-                        entity_ids.push(entities_to_vertices[d].len());
-                        entities_to_cells[d]
-                            .push(vec![CellLocalIndexPair::new(cell_i, local_index)]);
-                        entities_to_vertices[d].push(vertices);
-                    }
+        let ref_conn = &reference_cell::connectivity(ReferenceCellType::Triangle)[1];
+        for cell_i in 0..ncells {
+            let cell = &cells[cell_i * 3..(cell_i + 1) * 3];
+            for (local_index, rc) in ref_conn.iter().enumerate() {
+                let mut first = cell[rc[0][0]];
+                let mut second = cell[rc[0][1]];
+                if first > second {
+                    std::mem::swap(&mut first, &mut second);
                 }
-                c_to_e.push(entity_ids);
+                if let Some(edge_index) = edge_indices.get(&(first, second)) {
+                    cells_to_entities[1][cell_i].push(*edge_index);
+                    entities_to_cells[1][*edge_index]
+                        .push(CellLocalIndexPair::new(cell_i, local_index));
+                } else {
+                    edge_indices.insert((first, second), entities_to_vertices[1].len());
+                    cells_to_entities[1][cell_i].push(entities_to_vertices[1].len());
+                    entities_to_cells[1].push(vec![CellLocalIndexPair::new(cell_i, local_index)]);
+                    entities_to_vertices[1].push(vec![first, second]);
+                }
             }
-            cells_to_entities[d] = c_to_e;
         }
 
         Self {
-            dim,
             index_map,
             entities_to_vertices,
             cells_to_entities,
@@ -122,11 +83,11 @@ impl SerialSingleElementTopology {
     }
 }
 
-impl Topology for SerialSingleElementTopology {
+impl Topology for SerialFlatTriangleTopology {
     type IndexType = usize;
 
     fn dim(&self) -> usize {
-        self.dim
+        2
     }
     fn index_map(&self) -> &[Self::IndexType] {
         &self.index_map
@@ -142,15 +103,15 @@ impl Topology for SerialSingleElementTopology {
         self.entity_count(self.entity_types[dim])
     }
     fn cell(&self, index: Self::IndexType) -> Option<&[usize]> {
-        if index < self.cells_to_entities[self.dim].len() {
-            Some(&self.cells_to_entities[self.dim][index])
+        if index < self.cells_to_entities[2].len() {
+            Some(&self.cells_to_entities[2][index])
         } else {
             None
         }
     }
     fn cell_type(&self, index: Self::IndexType) -> Option<ReferenceCellType> {
-        if index < self.cells_to_entities[self.dim].len() {
-            Some(self.entity_types[self.dim])
+        if index < self.cells_to_entities[2].len() {
+            Some(self.entity_types[2])
         } else {
             None
         }
@@ -164,7 +125,7 @@ impl Topology for SerialSingleElementTopology {
         Ownership::Owned
     }
     fn cell_to_entities(&self, index: Self::IndexType, dim: usize) -> Option<&[Self::IndexType]> {
-        if dim <= self.dim && index < self.cells_to_entities[dim].len() {
+        if dim <= 2 && index < self.cells_to_entities[dim].len() {
             Some(&self.cells_to_entities[dim][index])
         } else {
             None
@@ -175,7 +136,7 @@ impl Topology for SerialSingleElementTopology {
         dim: usize,
         index: Self::IndexType,
     ) -> Option<&[CellLocalIndexPair<Self::IndexType>]> {
-        if dim <= self.dim && index < self.entities_to_cells[dim].len() {
+        if dim <= 2 && index < self.entities_to_cells[dim].len() {
             Some(&self.entities_to_cells[dim][index])
         } else {
             None
@@ -183,9 +144,9 @@ impl Topology for SerialSingleElementTopology {
     }
 
     fn entity_vertices(&self, dim: usize, index: Self::IndexType) -> Option<&[Self::IndexType]> {
-        if dim == self.dim {
+        if dim == 2 {
             self.cell_to_entities(index, 0)
-        } else if dim < self.dim && index < self.entities_to_vertices[dim].len() {
+        } else if dim < 2 && index < self.entities_to_vertices[dim].len() {
             Some(&self.entities_to_vertices[dim][index])
         } else {
             None
@@ -195,10 +156,10 @@ impl Topology for SerialSingleElementTopology {
 
 #[cfg(test)]
 mod test {
-    use crate::grid_impl::single_element_grid::topology::*;
+    use crate::grid_impl::flat_triangle_grid::topology::*;
 
-    fn example_topology() -> SerialSingleElementTopology {
-        SerialSingleElementTopology::new(&[0, 1, 2, 2, 1, 3], ReferenceCellType::Triangle)
+    fn example_topology() -> SerialFlatTriangleTopology {
+        SerialFlatTriangleTopology::new(&[0, 1, 2, 2, 1, 3])
     }
 
     #[test]

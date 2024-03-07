@@ -1,29 +1,20 @@
 //! Type definitions
 
 pub mod cell_iterator;
-pub mod vertex_iterator;
+pub mod point_iterator;
 
 pub use num::Float;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub enum ReferenceCellType {
-    Point,
-    Interval,
-    Triangle,
-    Quadrilateral,
-    Tetrahedron,
-    Hexahedron,
-    Prism,
-    Pyramid,
-}
+pub use bempp_element::cell::ReferenceCellType;
 
-pub struct CellLocalIndexPair {
-    pub cell: usize,
+#[derive(Debug, Clone)]
+pub struct CellLocalIndexPair<IndexType: std::fmt::Debug + Eq + Copy> {
+    pub cell: IndexType,
     pub local_index: usize,
 }
 
-impl CellLocalIndexPair {
-    pub fn new(cell: usize, local_index: usize) -> Self {
+impl<IndexType: std::fmt::Debug + Eq + Copy> CellLocalIndexPair<IndexType> {
+    pub fn new(cell: IndexType, local_index: usize) -> Self {
         Self { cell, local_index }
     }
 }

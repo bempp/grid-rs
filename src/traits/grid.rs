@@ -3,13 +3,14 @@
 use crate::traits::cell::CellType;
 use crate::traits::point::PointType;
 use crate::types::cell_iterator::CellIterator;
-use crate::types::vertex_iterator::PointIterator;
+use crate::types::point_iterator::PointIterator;
 use crate::types::{CellLocalIndexPair, Float};
 
 use super::ReferenceMapType;
 
 pub trait GridType: std::marker::Sized {
     type T: Float;
+    type IndexType: std::fmt::Debug + Eq + Copy;
 
     type Point<'a>: PointType
     where
@@ -22,13 +23,6 @@ pub trait GridType: std::marker::Sized {
     type ReferenceMap<'a>: ReferenceMapType
     where
         Self: 'a;
-
-    type ReferenceMapIterator<'a, Iter: std::iter::Iterator<Item = usize>>: std::iter::Iterator<
-        Item = Self::ReferenceMap<'a>,
-    >
-    where
-        Self: 'a,
-        Iter: 'a;
 
     fn number_of_vertices(&self) -> usize;
 
@@ -71,20 +65,14 @@ pub trait GridType: std::marker::Sized {
     fn reference_to_physical_map<'a>(
         &'a self,
         reference_points: &'a [Self::T],
-        cell_index: usize,
     ) -> Self::ReferenceMap<'a>;
 
-    fn iter_reference_to_physical_map<'a, Iter: std::iter::Iterator<Item = usize> + 'a>(
-        &'a self,
-        reference_points: &'a [Self::T],
-        iter: Iter,
-    ) -> Self::ReferenceMapIterator<'a, Iter>
-    where
-        Self: 'a;
+    fn vertex_to_cells(
+        &self,
+        vertex_index: Self::IndexType,
+    ) -> &[CellLocalIndexPair<Self::IndexType>];
 
-    fn point_to_cells(&self, point_index: usize) -> &[CellLocalIndexPair];
+    fn edge_to_cells(&self, edge_index: Self::IndexType) -> &[CellLocalIndexPair<Self::IndexType>];
 
-    fn edge_to_cells(&self, edge_index: usize) -> &[CellLocalIndexPair];
-
-    fn face_to_cells(&self, face_index: usize) -> &[CellLocalIndexPair];
+    fn face_to_cells(&self, face_index: Self::IndexType) -> &[CellLocalIndexPair<Self::IndexType>];
 }

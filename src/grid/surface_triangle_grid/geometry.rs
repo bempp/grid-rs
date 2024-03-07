@@ -8,7 +8,7 @@ use rlst_dense::traits::DefaultIterator;
 
 use crate::{
     traits::{GeometryType, GridType},
-    types::vertex_iterator::PointIterator,
+    types::point_iterator::PointIterator,
 };
 
 use super::grid::TriangleSurfaceGrid;
