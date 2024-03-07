@@ -105,6 +105,18 @@ pub trait Geometry {
 
     /// Get the geometry evaluator for the given points
     fn get_evaluator<'a>(&'a self, points: &'a [Self::T]) -> Self::Evaluator<'a>;
+
+    /// Get the id of a point from its index
+    fn point_index_to_id(&self, index: usize) -> usize;
+
+    /// Get the id of a cell from its index
+    fn cell_index_to_id(&self, index: Self::IndexType) -> usize;
+
+    // Get the index of a point from its id
+    fn point_id_to_index(&self, id: usize) -> usize;
+
+    // Get the index of a cell from its id
+    fn cell_id_to_index(&self, id: usize) -> Self::IndexType;
 }
 
 /// Geometry evaluator

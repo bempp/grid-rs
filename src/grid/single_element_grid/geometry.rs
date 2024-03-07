@@ -165,6 +165,21 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
     fn get_evaluator<'a>(&'a self, points: &'a [Self::T]) -> GeometryEvaluatorSingleElement<'a, T> {
         GeometryEvaluatorSingleElement::<T>::new(self, points)
     }
+
+    fn point_index_to_id(&self, index: usize) -> usize {
+        panic!();
+    }
+
+    fn cell_index_to_id(&self, index: usize) -> usize {
+        panic!();
+    }
+
+    fn point_id_to_index(&self, id: usize) -> usize {
+        panic!();
+    }
+    fn cell_id_to_index(&self, id: usize) -> usize {
+        panic!();
+    }
 }
 
 pub struct GeometryEvaluatorSingleElement<'a, T: Float + Scalar> {

@@ -193,6 +193,21 @@ impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
     fn get_evaluator<'a>(&'a self, points: &'a [Self::T]) -> Self::Evaluator<'a> {
         GeometryEvaluatorMixed::new(self, points)
     }
+
+    fn point_index_to_id(&self, index: usize) -> usize {
+        panic!();
+    }
+
+    fn cell_index_to_id(&self, index: (usize, usize)) -> usize {
+        panic!();
+    }
+
+    fn point_id_to_index(&self, id: usize) -> usize {
+        panic!();
+    }
+    fn cell_id_to_index(&self, id: usize) -> (usize, usize) {
+        panic!();
+    }
 }
 
 pub struct GeometryEvaluatorMixed<'a, T: Float + Scalar> {

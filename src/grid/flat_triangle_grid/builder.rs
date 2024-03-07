@@ -11,15 +11,14 @@ use rlst_dense::{
     rlst_array_from_slice2, rlst_dynamic_array2,
     traits::MatrixInverse,
 };
-
 use std::collections::HashMap;
 
 pub struct SerialFlatTriangleGridBuilder<T: Float + Scalar<Real = T>> {
     points: Vec<T>,
     cells: Vec<usize>,
     point_indices_to_ids: Vec<usize>,
-    cell_indices_to_ids: Vec<usize>,
     point_ids_to_indices: HashMap<usize, usize>,
+    cell_indices_to_ids: Vec<usize>,
     cell_ids_to_indices: HashMap<usize, usize>,
 }
 
@@ -37,8 +36,8 @@ where
             points: vec![],
             cells: vec![],
             point_indices_to_ids: vec![],
-            cell_indices_to_ids: vec![],
             point_ids_to_indices: HashMap::new(),
+            cell_indices_to_ids: vec![],
             cell_ids_to_indices: HashMap::new(),
         }
     }
@@ -48,8 +47,8 @@ where
             points: Vec::with_capacity(npoints * Self::GDIM),
             cells: Vec::with_capacity(ncells * 3),
             point_indices_to_ids: Vec::with_capacity(npoints),
-            cell_indices_to_ids: Vec::with_capacity(ncells),
             point_ids_to_indices: HashMap::new(),
+            cell_indices_to_ids: Vec::with_capacity(ncells),
             cell_ids_to_indices: HashMap::new(),
         }
     }
@@ -80,6 +79,13 @@ where
             [npts, 3],
             [1, npts]
         ));
-        SerialFlatTriangleGrid::new(points, &self.cells)
+        SerialFlatTriangleGrid::new(
+            points,
+            &self.cells,
+            self.point_indices_to_ids,
+            self.point_ids_to_indices,
+            self.cell_indices_to_ids,
+            self.cell_ids_to_indices,
+        )
     }
 }
