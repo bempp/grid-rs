@@ -1,4 +1,4 @@
-use crate::grid_impl::traits::{Geometry, GeometryEvaluator, Grid, Topology};
+use crate::grid::traits::{Geometry, GeometryEvaluator, Grid, Topology};
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use crate::traits::{
@@ -323,9 +323,11 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::grid_impl::grid::*;
-    use crate::grid_impl::mixed_grid::SerialMixedGrid;
-    use crate::grid_impl::single_element_grid::SerialSingleElementGrid;
+    use super::*;
+    use crate::grid::flat_triangle_grid::SerialFlatTriangleGridBuilder;
+    use crate::grid::mixed_grid::SerialMixedGrid;
+    use crate::grid::single_element_grid::SerialSingleElementGrid;
+    use crate::traits::builder::Builder;
     use rlst_dense::{rlst_dynamic_array2, traits::RandomAccessMut};
 
     #[test]
@@ -441,6 +443,51 @@ mod test {
 
         assert_eq!(grid.number_of_vertices(), 4);
         assert_eq!(grid.number_of_points(), 9);
+        assert_eq!(grid.number_of_cells(), 2);
+
+        let mut coords = vec![0.0; grid.geometry().dim()];
+        for point in grid.iter_all_points() {
+            point.coords(coords.as_mut_slice());
+            println!("{:#?}", coords);
+        }
+
+        for cell in grid.iter_all_cells() {
+            println!("{:?}", cell.index());
+        }
+        for cell in grid.iter_all_cells() {
+            for (local_index, (vertex_index, edge_index)) in cell
+                .topology()
+                .vertex_indices()
+                .zip(cell.topology().edge_indices())
+                .enumerate()
+            {
+                println!(
+                    "Cell: {}, Vertex: {}, {:?}, Edge: {}, {:?}, Volume: {}",
+                    cell.index(),
+                    local_index,
+                    vertex_index,
+                    local_index,
+                    edge_index,
+                    cell.geometry().volume(),
+                )
+            }
+        }
+    }
+
+    #[test]
+    fn test_grid_flat_triangle() {
+        let mut b = SerialFlatTriangleGridBuilder::<f64>::new(());
+        b.add_point(0, [0.0, 0.0, 0.0]);
+        b.add_point(1, [1.0, 0.0, 1.0]);
+        b.add_point(2, [1.0, 1.0, 0.0]);
+        b.add_point(3, [0.0, 1.0, 0.0]);
+        b.add_cell(0, [0, 1, 2]);
+        b.add_cell(0, [1, 2, 3]);
+
+        let grid = b.create_grid();
+
+        assert_eq!(grid.number_of_vertices(), 4);
+        assert_eq!(grid.number_of_points(), 4);
         assert_eq!(grid.number_of_cells(), 2);
 
         let mut coords = vec![0.0; grid.geometry().dim()];

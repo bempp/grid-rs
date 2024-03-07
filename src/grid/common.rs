@@ -1,6 +1,6 @@
 //! Functionality common to multiple grid implementations
 
-use crate::grid_impl::traits::Geometry;
+use crate::grid::traits::Geometry;
 use rlst_common::types::Scalar;
 use rlst_dense::traits::{Shape, UnsafeRandomAccessByRef};
 

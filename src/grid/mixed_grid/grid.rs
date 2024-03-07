@@ -1,7 +1,7 @@
 //! Serial implementation of a grid
 
-use crate::grid_impl::mixed_grid::{geometry::SerialMixedGeometry, topology::SerialMixedTopology};
-use crate::grid_impl::traits::Grid;
+use crate::grid::mixed_grid::{geometry::SerialMixedGeometry, topology::SerialMixedTopology};
+use crate::grid::traits::Grid;
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use bempp_element::element::{create_element, ElementFamily, Inverse};

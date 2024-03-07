@@ -1,6 +1,6 @@
 //! Implementation of grid geometry
 
-use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
+use crate::grid::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
 use crate::types::ReferenceCellType;
 use bempp_element::element::Inverse;
@@ -265,7 +265,7 @@ impl<'a, T: Float + Scalar + Inverse> GeometryEvaluator for GeometryEvaluatorFla
 
 #[cfg(test)]
 mod test {
-    use crate::grid_impl::flat_triangle_grid::geometry::*;
+    use crate::grid::flat_triangle_grid::geometry::*;
     use approx::*;
     use rlst_dense::{
         rlst_dynamic_array2,

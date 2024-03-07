@@ -1,6 +1,6 @@
 //! Implementation of grid topology
 
-use crate::grid_impl::traits::{Ownership, Topology};
+use crate::grid::traits::{Ownership, Topology};
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use crate::types::CellLocalIndexPair;
@@ -266,7 +266,7 @@ impl Topology for SerialMixedTopology {
 
 #[cfg(test)]
 mod test {
-    use crate::grid_impl::mixed_grid::topology::*;
+    use crate::grid::mixed_grid::topology::*;
 
     fn example_topology() -> SerialMixedTopology {
         SerialMixedTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2])

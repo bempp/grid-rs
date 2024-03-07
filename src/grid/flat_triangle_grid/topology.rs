@@ -1,6 +1,6 @@
 //! Implementation of grid topology
 
-use crate::grid_impl::traits::{Ownership, Topology};
+use crate::grid::traits::{Ownership, Topology};
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use crate::types::CellLocalIndexPair;
@@ -156,7 +156,7 @@ impl Topology for SerialFlatTriangleTopology {
 
 #[cfg(test)]
 mod test {
-    use crate::grid_impl::flat_triangle_grid::topology::*;
+    use crate::grid::flat_triangle_grid::topology::*;
 
     fn example_topology() -> SerialFlatTriangleTopology {
         SerialFlatTriangleTopology::new(&[0, 1, 2, 2, 1, 3])

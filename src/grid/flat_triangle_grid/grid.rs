@@ -1,9 +1,9 @@
 //! Serial implementation of a grid
 
-use crate::grid_impl::flat_triangle_grid::{
+use crate::grid::flat_triangle_grid::{
     geometry::SerialFlatTriangleGeometry, topology::SerialFlatTriangleTopology,
 };
-use crate::grid_impl::traits::Grid;
+use crate::grid::traits::Grid;
 use bempp_element::element::Inverse;
 use num::Float;
 use rlst_common::types::Scalar;

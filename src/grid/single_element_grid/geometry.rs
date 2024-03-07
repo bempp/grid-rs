@@ -1,7 +1,7 @@
 //! Implementation of grid geometry
 
-use crate::grid_impl::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
-use crate::grid_impl::traits::{Geometry, GeometryEvaluator};
+use crate::grid::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
+use crate::grid::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
@@ -232,7 +232,7 @@ impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorSingleElement
 
 #[cfg(test)]
 mod test {
-    use crate::grid_impl::single_element_grid::geometry::*;
+    use crate::grid::single_element_grid::geometry::*;
     use crate::types::ReferenceCellType;
     use approx::*;
     use bempp_element::element::{create_element, ElementFamily};
