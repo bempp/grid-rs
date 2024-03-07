@@ -156,7 +156,7 @@ impl Topology for SerialFlatTriangleTopology {
 
 #[cfg(test)]
 mod test {
-    use crate::grid::flat_triangle_grid::topology::*;
+    use super::*;
 
     fn example_topology() -> SerialFlatTriangleTopology {
         SerialFlatTriangleTopology::new(&[0, 1, 2, 2, 1, 3])

@@ -265,7 +265,7 @@ impl<'a, T: Float + Scalar + Inverse> GeometryEvaluator for GeometryEvaluatorFla
 
 #[cfg(test)]
 mod test {
-    use crate::grid::flat_triangle_grid::geometry::*;
+    use super::*;
     use approx::*;
     use rlst_dense::{
         rlst_dynamic_array2,

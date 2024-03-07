@@ -1,5 +1,7 @@
+mod builder;
 mod geometry;
 mod grid;
 mod topology;
 
-pub use crate::grid::single_element_grid::grid::SerialSingleElementGrid;
+pub use self::grid::SerialSingleElementGrid;
+pub use self::builder::SerialSingleElementGridBuilder;

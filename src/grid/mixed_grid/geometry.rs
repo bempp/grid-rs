@@ -267,7 +267,7 @@ impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorMixed<'a, T> 
 
 #[cfg(test)]
 mod test {
-    use crate::grid::mixed_grid::geometry::*;
+    use super::*;
     use approx::*;
     use bempp_element::element::{create_element, ElementFamily};
     use bempp_traits::element::Continuity;

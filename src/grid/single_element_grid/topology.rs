@@ -195,7 +195,7 @@ impl Topology for SerialSingleElementTopology {
 
 #[cfg(test)]
 mod test {
-    use crate::grid::single_element_grid::topology::*;
+    use super::*;
 
     fn example_topology() -> SerialSingleElementTopology {
         SerialSingleElementTopology::new(&[0, 1, 2, 2, 1, 3], ReferenceCellType::Triangle)

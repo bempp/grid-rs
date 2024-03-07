@@ -232,7 +232,7 @@ impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorSingleElement
 
 #[cfg(test)]
 mod test {
-    use crate::grid::single_element_grid::geometry::*;
+    use super::*;
     use crate::types::ReferenceCellType;
     use approx::*;
     use bempp_element::element::{create_element, ElementFamily};

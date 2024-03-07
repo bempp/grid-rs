@@ -266,7 +266,7 @@ impl Topology for SerialMixedTopology {
 
 #[cfg(test)]
 mod test {
-    use crate::grid::mixed_grid::topology::*;
+    use super::*;
 
     fn example_topology() -> SerialMixedTopology {
         SerialMixedTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2])
