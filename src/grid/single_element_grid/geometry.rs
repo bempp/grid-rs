@@ -14,6 +14,7 @@ use rlst_dense::{
     rlst_array_from_slice2, rlst_dynamic_array4,
     traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
+use std::collections::HashMap;
 
 /// Geometry of a serial grid
 pub struct SerialSingleElementGeometry<T: Float + Scalar> {
@@ -26,6 +27,10 @@ pub struct SerialSingleElementGeometry<T: Float + Scalar> {
     diameters: Vec<T>,
     volumes: Vec<T>,
     cell_indices: Vec<usize>,
+    point_indices_to_ids: Vec<usize>,
+    point_ids_to_indices: HashMap<usize, usize>,
+    cell_indices_to_ids: Vec<usize>,
+    cell_ids_to_indices: HashMap<usize, usize>,
 }
 
 unsafe impl<T: Float + Scalar> Sync for SerialSingleElementGeometry<T> {}
@@ -35,6 +40,10 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
         coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells_input: &[usize],
         element: CiarletElement<T>,
+        point_indices_to_ids: Vec<usize>,
+        point_ids_to_indices: HashMap<usize, usize>,
+        cell_indices_to_ids: Vec<usize>,
+        cell_ids_to_indices: HashMap<usize, usize>,
     ) -> Self {
         let dim = coordinates.shape()[1];
         let size = element.dim();
@@ -86,6 +95,10 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
             diameters,
             volumes,
             cell_indices,
+            point_indices_to_ids,
+            point_ids_to_indices,
+            cell_indices_to_ids,
+            cell_ids_to_indices,
         }
     }
 }
@@ -167,18 +180,16 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
     }
 
     fn point_index_to_id(&self, index: usize) -> usize {
-        panic!();
+        self.point_indices_to_ids[index]
     }
-
     fn cell_index_to_id(&self, index: usize) -> usize {
-        panic!();
+        self.cell_indices_to_ids[index]
     }
-
     fn point_id_to_index(&self, id: usize) -> usize {
-        panic!();
+        self.point_ids_to_indices[&id]
     }
     fn cell_id_to_index(&self, id: usize) -> usize {
-        panic!();
+        self.cell_ids_to_indices[&id]
     }
 }
 
@@ -273,7 +284,15 @@ mod test {
         *points.get_mut([2, 1]).unwrap() = 1.0;
         *points.get_mut([3, 0]).unwrap() = 0.0;
         *points.get_mut([3, 1]).unwrap() = 1.0;
-        SerialSingleElementGeometry::new(points, &[0, 1, 2, 0, 2, 3], p1triangle)
+        SerialSingleElementGeometry::new(
+            points,
+            &[0, 1, 2, 0, 2, 3],
+            p1triangle,
+            vec![0, 1, 2, 3],
+            HashMap::from([(0, 0), (1, 1), (2, 2), (3, 3)]),
+            vec![0, 1],
+            HashMap::from([(0, 0), (1, 1)]),
+        )
     }
 
     fn example_geometry_3d() -> SerialSingleElementGeometry<f64> {
@@ -311,7 +330,25 @@ mod test {
         *points.get_mut([8, 0]).unwrap() = 1.0;
         *points.get_mut([8, 1]).unwrap() = 1.0;
         *points.get_mut([8, 2]).unwrap() = 0.0;
-        SerialSingleElementGeometry::new(points, &[0, 2, 8, 5, 4, 1, 0, 8, 6, 7, 3, 4], p2triangle)
+        SerialSingleElementGeometry::new(
+            points,
+            &[0, 2, 8, 5, 4, 1, 0, 8, 6, 7, 3, 4],
+            p2triangle,
+            vec![0, 1, 2, 3, 4, 5, 6, 7, 8],
+            HashMap::from([
+                (0, 0),
+                (1, 1),
+                (2, 2),
+                (3, 3),
+                (4, 4),
+                (5, 5),
+                (6, 6),
+                (7, 7),
+                (8, 8),
+            ]),
+            vec![0, 1],
+            HashMap::from([(0, 0), (1, 1)]),
+        )
     }
 
     #[test]

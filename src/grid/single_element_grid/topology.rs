@@ -4,6 +4,7 @@ use crate::grid::traits::{Ownership, Topology};
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
 use crate::types::CellLocalIndexPair;
+use std::collections::HashMap;
 
 fn all_equal<T: Eq>(a: &[T], b: &[T]) -> bool {
     if a.len() != b.len() {
@@ -30,14 +31,28 @@ pub struct SerialSingleElementTopology {
     cells_to_entities: Vec<Vec<Vec<usize>>>,
     entities_to_cells: Vec<Vec<Vec<CellLocalIndexPair<usize>>>>,
     entity_types: Vec<ReferenceCellType>,
+    vertex_indices_to_ids: Vec<usize>,
+    vertex_ids_to_indices: HashMap<usize, usize>,
+    cell_indices_to_ids: Vec<usize>,
+    cell_ids_to_indices: HashMap<usize, usize>,
 }
 
 unsafe impl Sync for SerialSingleElementTopology {}
 
 impl SerialSingleElementTopology {
-    pub fn new(cells_input: &[usize], cell_type: ReferenceCellType) -> Self {
+    pub fn new(
+        cells_input: &[usize],
+        cell_type: ReferenceCellType,
+        point_indices_to_ids: &[usize],
+        grid_cell_indices_to_ids: &[usize],
+    ) -> Self {
         let size = reference_cell::entity_counts(cell_type)[0];
         let ncells = cells_input.len() / size;
+
+        let mut vertex_indices_to_ids = vec![];
+        let mut vertex_ids_to_indices = HashMap::new();
+        let mut cell_indices_to_ids = vec![];
+        let mut cell_ids_to_indices = HashMap::new();
 
         let mut index_map = vec![0; ncells];
         let mut vertices = vec![];
@@ -59,11 +74,15 @@ impl SerialSingleElementTopology {
         for (cell_i, i) in index_map.iter_mut().enumerate() {
             let cell = &cells_input[start..start + size];
             *i = cell_i;
+            cell_indices_to_ids.push(grid_cell_indices_to_ids[cell_i]);
+            cell_ids_to_indices.insert(grid_cell_indices_to_ids[cell_i], cell_i);
             let mut row = vec![];
             for v in cell {
                 if !vertices.contains(v) {
                     entities_to_cells[0].push(vec![]);
                     vertices.push(*v);
+                    vertex_indices_to_ids.push(point_indices_to_ids[*v]);
+                    vertex_ids_to_indices.insert(point_indices_to_ids[*v], *v);
                 }
                 row.push(vertices.iter().position(|&r| r == *v).unwrap());
             }
@@ -118,6 +137,10 @@ impl SerialSingleElementTopology {
             cells_to_entities,
             entities_to_cells,
             entity_types,
+            vertex_indices_to_ids,
+            vertex_ids_to_indices,
+            cell_indices_to_ids,
+            cell_ids_to_indices,
         }
     }
 }
@@ -192,17 +215,17 @@ impl Topology for SerialSingleElementTopology {
         }
     }
 
-    fn vertex_index_to_id(&self, index: Self::IndexType) -> usize {
-        panic!();
+    fn vertex_index_to_id(&self, index: usize) -> usize {
+        self.vertex_indices_to_ids[index]
     }
-    fn cell_index_to_id(&self, index: Self::IndexType) -> usize {
-        panic!();
+    fn cell_index_to_id(&self, index: usize) -> usize {
+        self.cell_indices_to_ids[index]
     }
-    fn vertex_id_to_index(&self, id: usize) -> Self::IndexType {
-        panic!();
+    fn vertex_id_to_index(&self, id: usize) -> usize {
+        self.vertex_ids_to_indices[&id]
     }
-    fn cell_id_to_index(&self, id: usize) -> Self::IndexType {
-        panic!();
+    fn cell_id_to_index(&self, id: usize) -> usize {
+        self.cell_ids_to_indices[&id]
     }
 }
 
@@ -211,7 +234,12 @@ mod test {
     use super::*;
 
     fn example_topology() -> SerialSingleElementTopology {
-        SerialSingleElementTopology::new(&[0, 1, 2, 2, 1, 3], ReferenceCellType::Triangle)
+        SerialSingleElementTopology::new(
+            &[0, 1, 2, 2, 1, 3],
+            ReferenceCellType::Triangle,
+            &[0, 1, 2, 3],
+            &[0, 1],
+        )
     }
 
     #[test]

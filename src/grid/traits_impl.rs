@@ -84,9 +84,7 @@ where
     type Geometry<'a> = CellGeometry<'a, T, GridImpl> where Self: 'a;
 
     fn id(&self) -> usize {
-        panic!();
-
-        //self.grid.geometry().point_index_to_id(self.index)
+        self.grid.geometry().point_index_to_id(self.index)
     }
     fn index(&self) -> usize {
         self.index
