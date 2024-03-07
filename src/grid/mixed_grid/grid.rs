@@ -4,12 +4,17 @@ use crate::grid::mixed_grid::{geometry::SerialMixedGeometry, topology::SerialMix
 use crate::grid::traits::Grid;
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
-use bempp_element::element::{create_element, ElementFamily, Inverse};
+use bempp_element::element::{create_element, ElementFamily};
 use bempp_traits::element::{Continuity, FiniteElement};
 use log::warn;
 use num::Float;
 use rlst_common::types::Scalar;
-use rlst_dense::{array::Array, base_array::BaseArray, data_container::VectorContainer};
+use rlst_dense::{
+    array::{views::ArrayViewMut, Array},
+    base_array::BaseArray,
+    data_container::VectorContainer,
+    traits::MatrixInverse,
+};
 
 /// A serial grid
 pub struct SerialMixedGrid<T: Float + Scalar> {
@@ -17,7 +22,10 @@ pub struct SerialMixedGrid<T: Float + Scalar> {
     geometry: SerialMixedGeometry<T>,
 }
 
-impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
+impl<T: Float + Scalar> SerialMixedGrid<T>
+where
+    for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
+{
     pub fn new(
         points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells: &[usize],
@@ -63,7 +71,7 @@ impl<T: Float + Scalar + Inverse> SerialMixedGrid<T> {
     }
 }
 
-impl<T: Float + Scalar + Inverse> Grid for SerialMixedGrid<T> {
+impl<T: Float + Scalar> Grid for SerialMixedGrid<T> {
     type T = T;
     type Topology = SerialMixedTopology;
     type Geometry = SerialMixedGeometry<T>;

@@ -2,13 +2,19 @@
 
 use crate::grid::flat_triangle_grid::grid::SerialFlatTriangleGrid;
 use crate::traits::builder::Builder;
-use bempp_element::element::Inverse;
 use num::Float;
 use rlst_common::types::Scalar;
-use rlst_dense::{rlst_array_from_slice2, rlst_dynamic_array2};
+use rlst_dense::{
+    array::{views::ArrayViewMut, Array},
+    base_array::BaseArray,
+    data_container::VectorContainer,
+    rlst_array_from_slice2, rlst_dynamic_array2,
+    traits::MatrixInverse,
+};
+
 use std::collections::HashMap;
 
-pub struct SerialFlatTriangleGridBuilder<T: Float + Scalar<Real = T> + Inverse> {
+pub struct SerialFlatTriangleGridBuilder<T: Float + Scalar<Real = T>> {
     points: Vec<T>,
     cells: Vec<usize>,
     point_indices_to_ids: Vec<usize>,
@@ -17,7 +23,10 @@ pub struct SerialFlatTriangleGridBuilder<T: Float + Scalar<Real = T> + Inverse> 
     cell_ids_to_indices: HashMap<usize, usize>,
 }
 
-impl<T: Float + Scalar<Real = T> + Inverse> Builder<3> for SerialFlatTriangleGridBuilder<T> {
+impl<T: Float + Scalar<Real = T>> Builder<3> for SerialFlatTriangleGridBuilder<T>
+where
+    for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
+{
     type GridType = SerialFlatTriangleGrid<T>;
     type T = T;
     type CellData = [usize; 3];

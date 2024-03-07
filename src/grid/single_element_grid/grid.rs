@@ -6,12 +6,17 @@ use crate::grid::single_element_grid::{
 use crate::grid::traits::Grid;
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
-use bempp_element::element::{create_element, ElementFamily, Inverse};
+use bempp_element::element::{create_element, ElementFamily};
 use bempp_traits::element::{Continuity, FiniteElement};
 use log::warn;
 use num::Float;
 use rlst_common::types::Scalar;
-use rlst_dense::{array::Array, base_array::BaseArray, data_container::VectorContainer};
+use rlst_dense::{
+    array::{views::ArrayViewMut, Array},
+    base_array::BaseArray,
+    data_container::VectorContainer,
+    traits::MatrixInverse,
+};
 
 /// A serial grid
 pub struct SerialSingleElementGrid<T: Float + Scalar> {
@@ -19,7 +24,10 @@ pub struct SerialSingleElementGrid<T: Float + Scalar> {
     geometry: SerialSingleElementGeometry<T>,
 }
 
-impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
+impl<T: Float + Scalar> SerialSingleElementGrid<T>
+where
+    for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
+{
     pub fn new(
         points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells: &[usize],
@@ -52,7 +60,7 @@ impl<T: Float + Scalar + Inverse> SerialSingleElementGrid<T> {
     }
 }
 
-impl<T: Float + Scalar + Inverse> Grid for SerialSingleElementGrid<T> {
+impl<T: Float + Scalar> Grid for SerialSingleElementGrid<T> {
     type T = T;
     type Topology = SerialSingleElementTopology;
     type Geometry = SerialSingleElementGeometry<T>;

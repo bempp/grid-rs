@@ -2,10 +2,8 @@
 
 pub mod cell_iterator;
 pub mod point_iterator;
-
-pub use num::Float;
-
 pub use bempp_element::cell::ReferenceCellType;
+pub use num::Float;
 
 #[derive(Debug, Clone)]
 pub struct CellLocalIndexPair<IndexType: std::fmt::Debug + Eq + Copy> {

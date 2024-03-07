@@ -3,15 +3,20 @@
 use crate::grid::single_element_grid::grid::SerialSingleElementGrid;
 use crate::traits::builder::Builder;
 use crate::types::ReferenceCellType;
-use bempp_element::element::{create_element, ElementFamily, Inverse};
+use bempp_element::element::{create_element, ElementFamily};
 use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
 use rlst_common::types::Scalar;
-use rlst_dense::{rlst_array_from_slice2, rlst_dynamic_array2};
+use rlst_dense::{
+    array::{views::ArrayViewMut, Array},
+    base_array::BaseArray,
+    data_container::VectorContainer,
+    rlst_array_from_slice2, rlst_dynamic_array2,
+    traits::MatrixInverse,
+};
 use std::collections::HashMap;
 
-pub struct SerialSingleElementGridBuilder<const GDIM: usize, T: Float + Scalar<Real = T> + Inverse>
-{
+pub struct SerialSingleElementGridBuilder<const GDIM: usize, T: Float + Scalar<Real = T>> {
     element_data: (ReferenceCellType, usize),
     points_per_cell: usize,
     points: Vec<T>,
@@ -22,8 +27,10 @@ pub struct SerialSingleElementGridBuilder<const GDIM: usize, T: Float + Scalar<R
     cell_ids_to_indices: HashMap<usize, usize>,
 }
 
-impl<const GDIM: usize, T: Float + Scalar<Real = T> + Inverse> Builder<GDIM>
+impl<const GDIM: usize, T: Float + Scalar<Real = T>> Builder<GDIM>
     for SerialSingleElementGridBuilder<GDIM, T>
+where
+    for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
 {
     type GridType = SerialSingleElementGrid<T>;
     type T = T;

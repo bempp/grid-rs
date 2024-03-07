@@ -3,14 +3,20 @@
 use crate::grid::mixed_grid::grid::SerialMixedGrid;
 use crate::traits::builder::Builder;
 use crate::types::ReferenceCellType;
-use bempp_element::element::{create_element, ElementFamily, Inverse};
+use bempp_element::element::{create_element, ElementFamily};
 use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
 use rlst_common::types::Scalar;
-use rlst_dense::{rlst_array_from_slice2, rlst_dynamic_array2};
+use rlst_dense::{
+    array::{views::ArrayViewMut, Array},
+    base_array::BaseArray,
+    data_container::VectorContainer,
+    rlst_array_from_slice2, rlst_dynamic_array2,
+    traits::MatrixInverse,
+};
 use std::collections::HashMap;
 
-pub struct SerialMixedGridBuilder<const GDIM: usize, T: Float + Scalar<Real = T> + Inverse> {
+pub struct SerialMixedGridBuilder<const GDIM: usize, T: Float + Scalar<Real = T>> {
     elements_to_npoints: HashMap<(ReferenceCellType, usize), usize>,
     points: Vec<T>,
     cells: Vec<usize>,
@@ -22,8 +28,10 @@ pub struct SerialMixedGridBuilder<const GDIM: usize, T: Float + Scalar<Real = T>
     cell_ids_to_indices: HashMap<usize, usize>,
 }
 
-impl<const GDIM: usize, T: Float + Scalar<Real = T> + Inverse> Builder<GDIM>
+impl<const GDIM: usize, T: Float + Scalar<Real = T>> Builder<GDIM>
     for SerialMixedGridBuilder<GDIM, T>
+where
+    for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
 {
     type GridType = SerialMixedGrid<T>;
     type T = T;

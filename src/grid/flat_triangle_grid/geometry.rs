@@ -3,26 +3,25 @@
 use crate::grid::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
 use crate::types::ReferenceCellType;
-use bempp_element::element::Inverse;
 use bempp_element::element::{create_element, CiarletElement, ElementFamily};
 use bempp_traits::element::{Continuity, FiniteElement};
 use num::Float;
 use rlst::rlst_static_array;
 use rlst_common::types::Scalar;
 use rlst_dense::{
-    array::{Array, SliceArray},
+    array::{views::ArrayViewMut, Array, SliceArray},
     base_array::BaseArray,
     data_container::VectorContainer,
     rlst_array_from_slice2,
     traits::{
-        DefaultIterator, DefaultIteratorMut, RandomAccessByRef, RawAccess, Shape,
+        DefaultIterator, DefaultIteratorMut, MatrixInverse, RandomAccessByRef, RawAccess, Shape,
         UnsafeRandomAccessByRef,
     },
 };
 use rlst_proc_macro::rlst_static_type;
 
 /// Geometry of a serial grid
-pub struct SerialFlatTriangleGeometry<T: Float + Scalar + Inverse> {
+pub struct SerialFlatTriangleGeometry<T: Float + Scalar> {
     dim: usize,
     index_map: Vec<usize>,
     pub(crate) coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
@@ -36,9 +35,12 @@ pub struct SerialFlatTriangleGeometry<T: Float + Scalar + Inverse> {
     cell_indices: Vec<usize>,
 }
 
-unsafe impl<T: Float + Scalar + Inverse> Sync for SerialFlatTriangleGeometry<T> {}
+unsafe impl<T: Float + Scalar> Sync for SerialFlatTriangleGeometry<T> {}
 
-impl<T: Float + Scalar<Real = T> + Inverse> SerialFlatTriangleGeometry<T> {
+impl<T: Float + Scalar<Real = T>> SerialFlatTriangleGeometry<T>
+where
+    for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
+{
     pub fn new(
         coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells_input: &[usize],
@@ -135,7 +137,7 @@ impl<T: Float + Scalar<Real = T> + Inverse> SerialFlatTriangleGeometry<T> {
     }
 }
 
-impl<T: Float + Scalar + Inverse> Geometry for SerialFlatTriangleGeometry<T> {
+impl<T: Float + Scalar> Geometry for SerialFlatTriangleGeometry<T> {
     type IndexType = usize;
     type T = T;
     type Element = CiarletElement<T>;
@@ -211,12 +213,12 @@ impl<T: Float + Scalar + Inverse> Geometry for SerialFlatTriangleGeometry<T> {
     }
 }
 
-pub struct GeometryEvaluatorFlatTriangle<'a, T: Float + Scalar + Inverse> {
+pub struct GeometryEvaluatorFlatTriangle<'a, T: Float + Scalar> {
     geometry: &'a SerialFlatTriangleGeometry<T>,
     points: SliceArray<'a, T, 2>,
 }
 
-impl<'a, T: Float + Scalar + Inverse> GeometryEvaluatorFlatTriangle<'a, T> {
+impl<'a, T: Float + Scalar> GeometryEvaluatorFlatTriangle<'a, T> {
     fn new(geometry: &'a SerialFlatTriangleGeometry<T>, points: &'a [T]) -> Self {
         let tdim = reference_cell::dim(geometry.element.cell_type());
         assert_eq!(points.len() % tdim, 0);
@@ -228,7 +230,7 @@ impl<'a, T: Float + Scalar + Inverse> GeometryEvaluatorFlatTriangle<'a, T> {
     }
 }
 
-impl<'a, T: Float + Scalar + Inverse> GeometryEvaluator for GeometryEvaluatorFlatTriangle<'a, T> {
+impl<'a, T: Float + Scalar> GeometryEvaluator for GeometryEvaluatorFlatTriangle<'a, T> {
     type T = T;
 
     fn point_count(&self) -> usize {
