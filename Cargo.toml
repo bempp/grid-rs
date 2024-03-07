@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 approx = "0.5"
-bempp-traits = { git = "https://github.com/bempp/bempp-rs.git", branch="mscroggs/inverse" }
-bempp-tools = { git = "https://github.com/bempp/bempp-rs.git", branch="mscroggs/inverse" }
-bempp-element = { git = "https://github.com/bempp/bempp-rs.git", branch="mscroggs/inverse" }
+bempp-traits = { git = "https://github.com/bempp/bempp-rs.git" }
+bempp-tools = { git = "https://github.com/bempp/bempp-rs.git" }
+bempp-element = { git = "https://github.com/bempp/bempp-rs.git" }
 num = "0.4"
 rlst = { git = "https://github.com/linalg-rs/rlst.git" }
 rlst-dense = { git = "https://github.com/linalg-rs/rlst.git" }
