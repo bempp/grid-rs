@@ -8,16 +8,17 @@ use crate::types::vertex_iterator::PointIterator;
 use crate::types::CellLocalIndexPair;
 use num::Float;
 use std::iter::Copied;
+use std::marker::PhantomData;
 
 pub struct Point<'a, T: Float, G: Geometry> {
     geometry: &'a G,
     index: usize,
-    _t: std::marker::PhantomData<T>,
+    _t: PhantomData<T>,
 }
 pub struct Cell<'a, T: Float, GridImpl: Grid> {
     grid: &'a GridImpl,
     index: usize,
-    _t: std::marker::PhantomData<T>,
+    _t: PhantomData<T>,
 }
 pub struct CellTopology<'a, GridImpl: Grid> {
     grid: &'a GridImpl,
@@ -26,7 +27,7 @@ pub struct CellTopology<'a, GridImpl: Grid> {
 pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
     grid: &'a GridImpl,
     index: <<GridImpl as Grid>::Geometry as Geometry>::IndexType,
-    _t: std::marker::PhantomData<T>,
+    _t: PhantomData<T>,
 }
 
 impl<'a, T: Float, G: Geometry<T = T>> PointType for Point<'a, T, G> {
@@ -76,7 +77,7 @@ where
         CellGeometry::<'_, T, GridImpl> {
             grid: self.grid,
             index: self.grid.geometry().index_map()[self.index],
-            _t: std::marker::PhantomData,
+            _t: PhantomData,
         }
     }
 }
@@ -205,7 +206,7 @@ where
     GridImpl: 'a,
 {
     _grid: &'a GridImpl,
-    _iter: std::marker::PhantomData<Iter>,
+    _iter: PhantomData<Iter>,
 }
 
 impl<'a, Iter: std::iter::Iterator<Item = usize>, GridImpl: Grid> Iterator
@@ -269,7 +270,7 @@ where
         Self::Point {
             geometry: self.geometry(),
             index,
-            _t: std::marker::PhantomData,
+            _t: PhantomData,
         }
     }
 
@@ -277,7 +278,7 @@ where
         Self::Cell {
             grid: self,
             index,
-            _t: std::marker::PhantomData,
+            _t: PhantomData,
         }
     }
 
