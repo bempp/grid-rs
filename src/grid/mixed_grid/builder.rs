@@ -23,8 +23,8 @@ pub struct SerialMixedGridBuilder<const GDIM: usize, T: Float + Scalar<Real = T>
     cell_types: Vec<ReferenceCellType>,
     cell_degrees: Vec<usize>,
     point_indices_to_ids: Vec<usize>,
-    cell_indices_to_ids: Vec<usize>,
     point_ids_to_indices: HashMap<usize, usize>,
+    cell_indices_to_ids: Vec<usize>,
     cell_ids_to_indices: HashMap<usize, usize>,
 }
 
@@ -46,8 +46,8 @@ where
             cell_types: vec![],
             cell_degrees: vec![],
             point_indices_to_ids: vec![],
-            cell_indices_to_ids: vec![],
             point_ids_to_indices: HashMap::new(),
+            cell_indices_to_ids: vec![],
             cell_ids_to_indices: HashMap::new(),
         }
     }
@@ -60,8 +60,8 @@ where
             cell_types: vec![],
             cell_degrees: vec![],
             point_indices_to_ids: Vec::with_capacity(npoints),
-            cell_indices_to_ids: Vec::with_capacity(ncells),
             point_ids_to_indices: HashMap::new(),
+            cell_indices_to_ids: Vec::with_capacity(ncells),
             cell_ids_to_indices: HashMap::new(),
         }
     }
@@ -110,6 +110,14 @@ where
             [npts, 3],
             [1, npts]
         ));
-        SerialMixedGrid::new(points, &self.cells, &self.cell_types, &self.cell_degrees)
+        SerialMixedGrid::new(
+            points,
+            &self.cells,
+            &self.cell_types,
+            &self.cell_degrees,
+            self.point_indices_to_ids,
+            self.point_ids_to_indices,
+            self.cell_indices_to_ids,
+        )
     }
 }

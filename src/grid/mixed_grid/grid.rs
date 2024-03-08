@@ -15,6 +15,7 @@ use rlst_dense::{
     data_container::VectorContainer,
     traits::MatrixInverse,
 };
+use std::collections::HashMap;
 
 /// A serial grid
 pub struct SerialMixedGrid<T: Float + Scalar> {
@@ -31,6 +32,9 @@ where
         cells: &[usize],
         cell_types: &[ReferenceCellType],
         cell_degrees: &[usize],
+        point_indices_to_ids: Vec<usize>,
+        point_ids_to_indices: HashMap<usize, usize>,
+        cell_indices_to_ids: Vec<usize>,
     ) -> Self {
         let mut element_info = vec![];
         let mut element_numbers = vec![];
@@ -64,8 +68,21 @@ where
             start += npoints;
         }
 
-        let topology = SerialMixedTopology::new(&cell_vertices, cell_types);
-        let geometry = SerialMixedGeometry::<T>::new(points, cells, elements, &element_numbers);
+        let topology = SerialMixedTopology::new(
+            &cell_vertices,
+            cell_types,
+            &point_indices_to_ids,
+            &cell_indices_to_ids,
+        );
+        let geometry = SerialMixedGeometry::<T>::new(
+            points,
+            cells,
+            elements,
+            &element_numbers,
+            point_indices_to_ids,
+            point_ids_to_indices,
+            &cell_indices_to_ids,
+        );
 
         Self { topology, geometry }
     }

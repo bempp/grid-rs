@@ -34,15 +34,29 @@ pub struct SerialMixedTopology {
     cells_to_entities: Vec<HashMap<ReferenceCellType, Vec<Vec<IndexType>>>>,
     entities_to_cells: Vec<HashMap<ReferenceCellType, Vec<Vec<CellLocalIndexPair<IndexType>>>>>,
     entity_types: Vec<Vec<ReferenceCellType>>,
+    vertex_indices_to_ids: HashMap<IndexType, usize>,
+    vertex_ids_to_indices: HashMap<usize, IndexType>,
+    cell_indices_to_ids: HashMap<IndexType, usize>,
+    cell_ids_to_indices: HashMap<usize, IndexType>,
 }
 
 unsafe impl Sync for SerialMixedTopology {}
 
 impl SerialMixedTopology {
-    pub fn new(cells_input: &[usize], cell_types: &[ReferenceCellType]) -> Self {
+    pub fn new(
+        cells_input: &[usize],
+        cell_types: &[ReferenceCellType],
+        point_indices_to_ids: &[usize],
+        grid_cell_indices_to_ids: &[usize],
+    ) -> Self {
         let mut index_map = vec![(ReferenceCellType::Point, 0); cell_types.len()];
         let mut vertices = vec![];
         let dim = reference_cell::dim(cell_types[0]);
+
+        let mut vertex_indices_to_ids = HashMap::new();
+        let mut vertex_ids_to_indices = HashMap::new();
+        let mut cell_indices_to_ids = HashMap::new();
+        let mut cell_ids_to_indices = HashMap::new();
 
         let mut entity_types = vec![vec![]; 4];
 
@@ -81,6 +95,10 @@ impl SerialMixedTopology {
                     let cell = &cells_input[start..start + n];
                     let cell_i = (*c, cells_to_entities[0][c].len());
                     index_map[i] = cell_i;
+
+                    cell_indices_to_ids.insert(cell_i, grid_cell_indices_to_ids[i]);
+                    cell_ids_to_indices.insert(grid_cell_indices_to_ids[i], cell_i);
+
                     let mut row = vec![];
                     for v in cell {
                         if !vertices.contains(v) {
@@ -88,6 +106,10 @@ impl SerialMixedTopology {
                                 ec.push(vec![]);
                             }
                             vertices.push(*v);
+                            vertex_indices_to_ids
+                                .insert((ReferenceCellType::Point, *v), point_indices_to_ids[*v]);
+                            vertex_ids_to_indices
+                                .insert(point_indices_to_ids[*v], (ReferenceCellType::Point, *v));
                         }
                         row.push((
                             ReferenceCellType::Point,
@@ -171,6 +193,10 @@ impl SerialMixedTopology {
             cells_to_entities,
             entities_to_cells,
             entity_types,
+            vertex_indices_to_ids,
+            vertex_ids_to_indices,
+            cell_indices_to_ids,
+            cell_ids_to_indices,
         }
     }
 }
@@ -263,17 +289,17 @@ impl Topology for SerialMixedTopology {
         }
     }
 
-    fn vertex_index_to_id(&self, index: Self::IndexType) -> usize {
-        panic!();
+    fn vertex_index_to_id(&self, index: IndexType) -> usize {
+        self.vertex_indices_to_ids[&index]
     }
-    fn cell_index_to_id(&self, index: Self::IndexType) -> usize {
-        panic!();
+    fn cell_index_to_id(&self, index: IndexType) -> usize {
+        self.cell_indices_to_ids[&index]
     }
-    fn vertex_id_to_index(&self, id: usize) -> Self::IndexType {
-        panic!();
+    fn vertex_id_to_index(&self, id: usize) -> IndexType {
+        self.vertex_ids_to_indices[&id]
     }
-    fn cell_id_to_index(&self, id: usize) -> Self::IndexType {
-        panic!();
+    fn cell_id_to_index(&self, id: usize) -> IndexType {
+        self.cell_ids_to_indices[&id]
     }
 }
 
@@ -282,7 +308,24 @@ mod test {
     use super::*;
 
     fn example_topology() -> SerialMixedTopology {
-        SerialMixedTopology::new(&[0, 1, 2, 2, 1, 3], &[ReferenceCellType::Triangle; 2])
+        SerialMixedTopology::new(
+            &[0, 1, 2, 2, 1, 3],
+            &[ReferenceCellType::Triangle; 2],
+            &[0, 1, 2, 3],
+            &[0, 1],
+        )
+    }
+
+    fn example_topology_mixed() -> SerialMixedTopology {
+        SerialMixedTopology::new(
+            &[0, 1, 2, 3, 1, 4, 3],
+            &[
+                ReferenceCellType::Quadrilateral,
+                ReferenceCellType::Triangle,
+            ],
+            &[0, 1, 2, 3, 4],
+            &[0, 1],
+        )
     }
 
     #[test]
@@ -337,16 +380,6 @@ mod test {
             assert_eq!(c[0].0, ReferenceCellType::Triangle);
             assert_eq!(c[0].1, i);
         }
-    }
-
-    fn example_topology_mixed() -> SerialMixedTopology {
-        SerialMixedTopology::new(
-            &[0, 1, 2, 3, 1, 4, 3],
-            &[
-                ReferenceCellType::Quadrilateral,
-                ReferenceCellType::Triangle,
-            ],
-        )
     }
 
     #[test]

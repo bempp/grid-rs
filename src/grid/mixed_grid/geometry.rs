@@ -14,6 +14,7 @@ use rlst_dense::{
     rlst_array_from_slice2, rlst_dynamic_array4,
     traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
+use std::collections::HashMap;
 
 /// Geometry of a serial grid
 pub struct SerialMixedGeometry<T: Float + Scalar> {
@@ -26,6 +27,10 @@ pub struct SerialMixedGeometry<T: Float + Scalar> {
     diameters: Vec<Vec<T>>,
     volumes: Vec<Vec<T>>,
     cell_indices: Vec<Vec<(usize, usize)>>,
+    point_indices_to_ids: Vec<usize>,
+    point_ids_to_indices: HashMap<usize, usize>,
+    cell_indices_to_ids: HashMap<(usize, usize), usize>,
+    cell_ids_to_indices: HashMap<usize, (usize, usize)>,
 }
 
 unsafe impl<T: Float + Scalar> Sync for SerialMixedGeometry<T> {}
@@ -36,11 +41,17 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
         cells_input: &[usize],
         elements: Vec<CiarletElement<T>>,
         cell_elements: &[usize],
+        point_indices_to_ids: Vec<usize>,
+        point_ids_to_indices: HashMap<usize, usize>,
+        grid_cell_indices_to_ids: &[usize],
     ) -> Self {
         let dim = coordinates.shape()[1];
         let mut index_map = vec![(0, 0); cell_elements.len()];
         let mut cells = vec![];
         let mut cell_indices = vec![];
+
+        let mut cell_indices_to_ids = HashMap::new();
+        let mut cell_ids_to_indices = HashMap::new();
 
         for (element_index, _e) in elements.iter().enumerate() {
             let mut start = 0;
@@ -55,6 +66,8 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
                     index_map[cell_i] = cell_index;
                     cell_indices[element_index].push(cell_index);
                     cells[element_index].extend_from_slice(&cells_input[start..start + size]);
+                    cell_indices_to_ids.insert(cell_index, grid_cell_indices_to_ids[cell_i]);
+                    cell_ids_to_indices.insert(grid_cell_indices_to_ids[cell_i], cell_index);
                 }
                 start += size;
             }
@@ -106,6 +119,10 @@ impl<T: Float + Scalar> SerialMixedGeometry<T> {
             diameters,
             volumes,
             cell_indices,
+            point_indices_to_ids,
+            point_ids_to_indices,
+            cell_indices_to_ids,
+            cell_ids_to_indices,
         }
     }
 }
@@ -195,18 +212,16 @@ impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
     }
 
     fn point_index_to_id(&self, index: usize) -> usize {
-        panic!();
+        self.point_indices_to_ids[index]
     }
-
     fn cell_index_to_id(&self, index: (usize, usize)) -> usize {
-        panic!();
+        self.cell_indices_to_ids[&index]
     }
-
     fn point_id_to_index(&self, id: usize) -> usize {
-        panic!();
+        self.point_ids_to_indices[&id]
     }
     fn cell_id_to_index(&self, id: usize) -> (usize, usize) {
-        panic!();
+        self.cell_ids_to_indices[&id]
     }
 }
 
@@ -304,7 +319,15 @@ mod test {
         *points.get_mut([2, 1]).unwrap() = 1.0;
         *points.get_mut([3, 0]).unwrap() = 0.0;
         *points.get_mut([3, 1]).unwrap() = 1.0;
-        SerialMixedGeometry::new(points, &[0, 1, 2, 0, 2, 3], vec![p1triangle], &[0, 0])
+        SerialMixedGeometry::new(
+            points,
+            &[0, 1, 2, 0, 2, 3],
+            vec![p1triangle],
+            &[0, 0],
+            vec![0, 1, 2, 3],
+            HashMap::from([(0, 0), (1, 1), (2, 2), (3, 3)]),
+            &[0, 1],
+        )
     }
 
     fn example_geometry_mixed() -> SerialMixedGeometry<f64> {
@@ -335,6 +358,9 @@ mod test {
             points,
             &[0, 1, 2, 3, 1, 4, 3],
             vec![p1quad, p1triangle],
+            &[0, 1],
+            vec![0, 1, 2, 3, 4],
+            HashMap::from([(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)]),
             &[0, 1],
         )
     }

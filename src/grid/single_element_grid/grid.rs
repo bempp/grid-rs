@@ -29,7 +29,6 @@ impl<T: Float + Scalar> SerialSingleElementGrid<T>
 where
     for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
 {
-
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
