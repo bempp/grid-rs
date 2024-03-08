@@ -116,7 +116,7 @@ where
             normals[cell_i].scale_in_place(T::one() / normal_length);
 
             volumes[cell_i] = normal_length / T::from(2.0).unwrap();
-            diameters[cell_i] = compute_diameter_triangle(v0.view(), v1.view(), v1.view());
+            diameters[cell_i] = compute_diameter_triangle(v0.view(), v1.view(), v2.view());
         }
 
         let element = create_element(
@@ -714,9 +714,9 @@ mod test {
     #[test]
     fn test_cell_entities_vertices() {
         //! Test the cell vertices
-        let t = example_grid_3d();
+        let g = example_grid_3d();
         for (i, vertices) in [[0, 1, 2], [0, 2, 3]].iter().enumerate() {
-            let c = t.cell_to_entities(i, 0).unwrap();
+            let c = g.cell_to_entities(i, 0).unwrap();
             assert_eq!(c.len(), 3);
             assert_eq!(c, vertices);
         }
@@ -725,9 +725,9 @@ mod test {
     #[test]
     fn test_cell_entities_edges() {
         //! Test the cell edges
-        let t = example_grid_3d();
+        let g = example_grid_3d();
         for (i, edges) in [[0, 1, 2], [3, 4, 1]].iter().enumerate() {
-            let c = t.cell_to_entities(i, 1).unwrap();
+            let c = g.cell_to_entities(i, 1).unwrap();
             assert_eq!(c.len(), 3);
             assert_eq!(c, edges);
         }
@@ -736,9 +736,9 @@ mod test {
     #[test]
     fn test_cell_entities_cells() {
         //! Test the cells
-        let t = example_grid_3d();
+        let g = example_grid_3d();
         for i in 0..2 {
-            let c = t.cell_to_entities(i, 2).unwrap();
+            let c = g.cell_to_entities(i, 2).unwrap();
             assert_eq!(c.len(), 1);
             assert_eq!(c[0], i);
         }
@@ -747,13 +747,13 @@ mod test {
     #[test]
     fn test_entities_to_cells_vertices() {
         //! Test the cell-to-vertex connectivity
-        let t = example_grid_3d();
-        let c_to_e = (0..t.entity_count(ReferenceCellType::Triangle))
-            .map(|i| t.cell_to_entities(i, 0).unwrap())
+        let g = example_grid_3d();
+        let c_to_e = (0..g.entity_count(ReferenceCellType::Triangle))
+            .map(|i| g.cell_to_entities(i, 0).unwrap())
             .collect::<Vec<_>>();
-        let e_to_c = (0..t.entity_count(ReferenceCellType::Point))
+        let e_to_c = (0..g.entity_count(ReferenceCellType::Point))
             .map(|i| {
-                t.entity_to_cells(0, i)
+                g.entity_to_cells(0, i)
                     .unwrap()
                     .iter()
                     .map(|x| x.cell)
@@ -776,13 +776,13 @@ mod test {
     #[test]
     fn test_entities_to_cells_edges() {
         //! Test the cell-to-edge connectivity
-        let t = example_grid_3d();
-        let c_to_e = (0..t.entity_count(ReferenceCellType::Triangle))
-            .map(|i| t.cell_to_entities(i, 1).unwrap())
+        let g = example_grid_3d();
+        let c_to_e = (0..g.entity_count(ReferenceCellType::Triangle))
+            .map(|i| g.cell_to_entities(i, 1).unwrap())
             .collect::<Vec<_>>();
-        let e_to_c = (0..t.entity_count(ReferenceCellType::Interval))
+        let e_to_c = (0..g.entity_count(ReferenceCellType::Interval))
             .map(|i| {
-                t.entity_to_cells(1, i)
+                g.entity_to_cells(1, i)
                     .unwrap()
                     .iter()
                     .map(|x| x.cell)
@@ -802,4 +802,26 @@ mod test {
         }
     }
 
+    #[test]
+    fn test_diameter() {
+        //! Test diameters
+        let g = example_grid_flat();
+
+        for cell_i in 0..2 {
+            assert_relative_eq!(
+                g.diameter(cell_i),
+                2.0 * f64::sqrt(1.5 - f64::sqrt(2.0)),
+                epsilon = 1e-12
+            );
+        }
+
+        let g = example_grid_3d();
+
+        for (cell_i, d) in [2.0 / f64::sqrt(6.0), 2.0 * f64::sqrt(1.5 - f64::sqrt(2.0))]
+            .iter()
+            .enumerate()
+        {
+            assert_relative_eq!(g.diameter(cell_i), d, epsilon = 1e-12);
+        }
+    }
 }
