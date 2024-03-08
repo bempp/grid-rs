@@ -1,3 +1,5 @@
+//! Implementing the grid traits from the topology and geometry traits used to store the grid data
+
 use crate::grid::traits::{Geometry, GeometryEvaluator, Grid, Topology};
 use crate::reference_cell;
 use crate::reference_cell::ReferenceCellType;
@@ -12,29 +14,35 @@ use rlst_common::types::Scalar;
 use std::iter::Copied;
 use std::marker::PhantomData;
 
+/// A point
 pub struct Point<'a, T: Float, G: Geometry> {
     geometry: &'a G,
     index: usize,
     _t: PhantomData<T>,
 }
+/// A cell
 pub struct Cell<'a, T: Float, GridImpl: Grid> {
     grid: &'a GridImpl,
     index: usize,
     _t: PhantomData<T>,
 }
+/// The topology of a cell
 pub struct CellTopology<'a, GridImpl: Grid> {
     topology: &'a <GridImpl as Grid>::Topology,
     index: <<GridImpl as Grid>::Topology as Topology>::IndexType,
 }
+/// The geometry of a cell
 pub struct CellGeometry<'a, T: Float, GridImpl: Grid> {
     geometry: &'a <GridImpl as Grid>::Geometry,
     index: <<GridImpl as Grid>::Geometry as Geometry>::IndexType,
     _t: PhantomData<T>,
 }
+/// A reference to physical map
 pub struct ReferenceMap<'a, GridImpl: Grid> {
     grid: &'a GridImpl,
     evaluator: <<GridImpl as Grid>::Geometry as Geometry>::Evaluator<'a>,
 }
+/// An iterator over points
 pub struct PointIterator<'a, GridImpl: Grid, Iter: std::iter::Iterator<Item = usize>> {
     iter: Iter,
     geometry: &'a <GridImpl as Grid>::Geometry,
@@ -332,6 +340,7 @@ mod test {
 
     #[test]
     fn test_grid_mixed_cell_type() {
+        //! Build a mixed grid using its builder
         let mut b = SerialMixedGridBuilder::<3, f64>::new(());
         b.add_point(0, [-1.0, 0.0, 0.0]);
         b.add_point(1, [-0.5, 0.0, 0.2]);
@@ -390,6 +399,7 @@ mod test {
 
     #[test]
     fn test_grid_single_element() {
+        //! Build a single element grid using its builder
         let mut b = SerialSingleElementGridBuilder::<3, f64>::new((ReferenceCellType::Triangle, 2));
         b.add_point(0, [0.0, 0.0, 0.0]);
         b.add_point(1, [0.5, 0.0, 0.2]);
@@ -439,6 +449,7 @@ mod test {
 
     #[test]
     fn test_grid_flat_triangle() {
+        //! Build a flat triangle grid using its builder
         let mut b = SerialFlatTriangleGridBuilder::<f64>::new(());
         b.add_point(1, [0.0, 0.0, 0.0]);
         b.add_point(2, [1.0, 0.0, 1.0]);

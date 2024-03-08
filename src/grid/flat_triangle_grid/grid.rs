@@ -1,4 +1,4 @@
-//! Serial implementation of a grid
+//! Flat triangle grid
 
 use crate::grid::traits::Ownership;
 use crate::grid::traits::{Geometry, GeometryEvaluator, Grid, Topology};
@@ -22,10 +22,11 @@ use rlst_dense::{
 use rlst_proc_macro::rlst_static_type;
 use std::collections::HashMap;
 
-/// A serial grid
+/// A flat triangle grid
 pub struct SerialFlatTriangleGrid<T: Float + Scalar<Real = T>> {
     index_map: Vec<usize>,
 
+    // Geometry information
     pub(crate) coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
     pub(crate) element: CiarletElement<T>,
     midpoints: Vec<rlst_static_type!(T, 3)>,
@@ -35,11 +36,13 @@ pub struct SerialFlatTriangleGrid<T: Float + Scalar<Real = T>> {
     pub(crate) jacobians: Vec<rlst_static_type!(T, 3, 2)>,
     cell_indices: Vec<usize>,
 
+    // Topology information
     entities_to_vertices: Vec<Vec<Vec<usize>>>,
     pub(crate) cells_to_entities: Vec<Vec<Vec<usize>>>,
     entities_to_cells: Vec<Vec<Vec<CellLocalIndexPair<usize>>>>,
     entity_types: Vec<ReferenceCellType>,
 
+    // Point and cell ids
     point_indices_to_ids: Vec<usize>,
     point_ids_to_indices: HashMap<usize, usize>,
     cell_indices_to_ids: Vec<usize>,
@@ -50,6 +53,7 @@ impl<T: Float + Scalar<Real = T>> SerialFlatTriangleGrid<T>
 where
     for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
 {
+    /// Create a flat triangle grid
     pub fn new(
         coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells: &[usize],
@@ -182,8 +186,6 @@ where
 
         Self {
             index_map,
-
-            // Geometry
             coordinates,
             element,
             midpoints,
@@ -192,14 +194,10 @@ where
             normals,
             jacobians,
             cell_indices,
-
-            // Topology
             entities_to_vertices,
             cells_to_entities,
             entities_to_cells,
             entity_types,
-
-            // ids
             point_indices_to_ids,
             point_ids_to_indices,
             cell_indices_to_ids,
@@ -315,12 +313,14 @@ impl<T: Float + Scalar<Real = T>> Geometry for SerialFlatTriangleGrid<T> {
     }
 }
 
+/// Geometry evaluator for a flat triangle grid
 pub struct GeometryEvaluatorFlatTriangle<'a, T: Float + Scalar<Real = T>> {
     grid: &'a SerialFlatTriangleGrid<T>,
     points: SliceArray<'a, T, 2>,
 }
 
 impl<'a, T: Float + Scalar<Real = T>> GeometryEvaluatorFlatTriangle<'a, T> {
+    /// Create a geometry evaluator
     fn new(grid: &'a SerialFlatTriangleGrid<T>, points: &'a [T]) -> Self {
         let tdim = reference_cell::dim(grid.element.cell_type());
         assert_eq!(points.len() % tdim, 0);
@@ -459,6 +459,7 @@ mod test {
     };
 
     fn example_grid_flat() -> SerialFlatTriangleGrid<f64> {
+        //! Create a flat test grid
         let mut points = rlst_dynamic_array2!(f64, [4, 3]);
         points[[0, 0]] = 0.0;
         points[[0, 1]] = 0.0;
@@ -484,6 +485,7 @@ mod test {
     }
 
     fn example_grid_3d() -> SerialFlatTriangleGrid<f64> {
+        //! Create a non-flat test grid
         let mut points = rlst_dynamic_array2!(f64, [4, 3]);
         points[[0, 0]] = 0.0;
         points[[0, 1]] = 0.0;
@@ -508,8 +510,19 @@ mod test {
         )
     }
 
+    fn triangle_points() -> Array<f64, BaseArray<f64, VectorContainer<f64>, 2>, 2> {
+        //! Create a set of points inside the reference triangle
+        let mut points = rlst_dynamic_array2!(f64, [2, 2]);
+        *points.get_mut([0, 0]).unwrap() = 0.2;
+        *points.get_mut([0, 1]).unwrap() = 0.5;
+        *points.get_mut([1, 0]).unwrap() = 0.6;
+        *points.get_mut([1, 1]).unwrap() = 0.1;
+        points
+    }
+
     #[test]
     fn test_cell_points() {
+        //! Test that the cell points are correct
         let g = example_grid_flat();
         for (cell_i, points) in [
             vec![
@@ -539,17 +552,9 @@ mod test {
         }
     }
 
-    fn triangle_points() -> Array<f64, BaseArray<f64, VectorContainer<f64>, 2>, 2> {
-        let mut points = rlst_dynamic_array2!(f64, [2, 2]);
-        *points.get_mut([0, 0]).unwrap() = 0.2;
-        *points.get_mut([0, 1]).unwrap() = 0.5;
-        *points.get_mut([1, 0]).unwrap() = 0.6;
-        *points.get_mut([1, 1]).unwrap() = 0.1;
-        points
-    }
-
     #[test]
     fn test_compute_point_flat() {
+        //! Test the compute_point function of an evaluator
         let g = example_grid_flat();
         let points = triangle_points();
 
@@ -573,6 +578,7 @@ mod test {
 
     #[test]
     fn test_compute_point_3d() {
+        //! Test the compute_point function of an evaluator
         let g = example_grid_3d();
         let points = triangle_points();
         let evaluator = g.get_evaluator(points.data());
@@ -596,6 +602,7 @@ mod test {
 
     #[test]
     fn test_compute_jacobian_3d() {
+        //! Test the compute_jacobian function of an evaluator
         let g = example_grid_3d();
         let points = triangle_points();
         let evaluator = g.get_evaluator(points.data());
@@ -624,6 +631,7 @@ mod test {
     }
     #[test]
     fn test_compute_normal_3d() {
+        //! Test the compute_normal function of an evaluator
         let g = example_grid_3d();
         let points = triangle_points();
         let evaluator = g.get_evaluator(points.data());
@@ -658,6 +666,7 @@ mod test {
 
     #[test]
     fn test_midpoint_flat() {
+        //! Test midpoints
         let g = example_grid_flat();
 
         let mut midpoint = vec![0.0; 3];
@@ -677,6 +686,7 @@ mod test {
 
     #[test]
     fn test_midpoint_3d() {
+        //! Test midpoints
         let g = example_grid_3d();
 
         let mut midpoint = vec![0.0; 3];
@@ -696,6 +706,7 @@ mod test {
 
     #[test]
     fn test_counts() {
+        //! Test the entity counts
         let g = example_grid_flat();
         assert_eq!(Topology::dim(&g), 2);
         assert_eq!(Geometry::dim(&g), 3);
@@ -708,7 +719,8 @@ mod test {
     }
 
     #[test]
-    fn test_cell_entities_points() {
+    fn test_cell_entities_vertices() {
+        //! Test the cell vertices
         let t = example_grid_3d();
         for (i, vertices) in [[0, 1, 2], [0, 2, 3]].iter().enumerate() {
             let c = t.cell_to_entities(i, 0).unwrap();
@@ -718,7 +730,8 @@ mod test {
     }
 
     #[test]
-    fn test_cell_entities_intervals() {
+    fn test_cell_entities_edges() {
+        //! Test the cell edges
         let t = example_grid_3d();
         for (i, edges) in [[0, 1, 2], [3, 4, 1]].iter().enumerate() {
             let c = t.cell_to_entities(i, 1).unwrap();
@@ -728,7 +741,8 @@ mod test {
     }
 
     #[test]
-    fn test_cell_entities_triangles() {
+    fn test_cell_entities_cells() {
+        //! Test the cells
         let t = example_grid_3d();
         for i in 0..2 {
             let c = t.cell_to_entities(i, 2).unwrap();
@@ -738,7 +752,8 @@ mod test {
     }
 
     #[test]
-    fn test_entities_to_cells_points() {
+    fn test_entities_to_cells_vertices() {
+        //! Test the cell-to-vertex connectivity
         let t = example_grid_3d();
         let c_to_e = (0..t.entity_count(ReferenceCellType::Triangle))
             .map(|i| t.cell_to_entities(i, 0).unwrap())
@@ -767,6 +782,7 @@ mod test {
 
     #[test]
     fn test_entities_to_cells_edges() {
+        //! Test the cell-to-edge connectivity
         let t = example_grid_3d();
         let c_to_e = (0..t.entity_count(ReferenceCellType::Triangle))
             .map(|i| t.cell_to_entities(i, 1).unwrap())

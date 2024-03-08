@@ -1,4 +1,4 @@
-//! Serial implementation of a grid
+//! Mixed grid
 
 use crate::grid::mixed_grid::{geometry::SerialMixedGeometry, topology::SerialMixedTopology};
 use crate::grid::traits::Grid;
@@ -17,7 +17,7 @@ use rlst_dense::{
 };
 use std::collections::HashMap;
 
-/// A serial grid
+/// A mixed grid
 pub struct SerialMixedGrid<T: Float + Scalar> {
     topology: SerialMixedTopology,
     geometry: SerialMixedGeometry<T>,
@@ -27,6 +27,7 @@ impl<T: Float + Scalar> SerialMixedGrid<T>
 where
     for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
 {
+    /// Create a mixed grid
     pub fn new(
         points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells: &[usize],

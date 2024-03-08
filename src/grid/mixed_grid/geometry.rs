@@ -36,6 +36,7 @@ pub struct SerialMixedGeometry<T: Float + Scalar> {
 unsafe impl<T: Float + Scalar> Sync for SerialMixedGeometry<T> {}
 
 impl<T: Float + Scalar> SerialMixedGeometry<T> {
+    /// Create a geometry
     pub fn new(
         coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells_input: &[usize],
@@ -225,6 +226,7 @@ impl<T: Float + Scalar> Geometry for SerialMixedGeometry<T> {
     }
 }
 
+/// Geometry evaluator for a mixed grid
 pub struct GeometryEvaluatorMixed<'a, T: Float + Scalar> {
     geometry: &'a SerialMixedGeometry<T>,
     tdim: usize,
@@ -232,6 +234,7 @@ pub struct GeometryEvaluatorMixed<'a, T: Float + Scalar> {
 }
 
 impl<'a, T: Float + Scalar> GeometryEvaluatorMixed<'a, T> {
+    /// Create a geometry evaluator
     fn new(geometry: &'a SerialMixedGeometry<T>, points: &'a [T]) -> Self {
         let tdim = reference_cell::dim(geometry.elements[0].cell_type());
         assert_eq!(points.len() % tdim, 0);
@@ -304,6 +307,7 @@ mod test {
     use rlst_dense::{rlst_dynamic_array2, traits::RandomAccessMut};
 
     fn example_geometry() -> SerialMixedGeometry<f64> {
+        //! A geometry with a single cell type
         let p1triangle = create_element(
             ElementFamily::Lagrange,
             bempp_element::cell::ReferenceCellType::Triangle,
@@ -331,6 +335,7 @@ mod test {
     }
 
     fn example_geometry_mixed() -> SerialMixedGeometry<f64> {
+        //! A geometry with a mixture of cell types
         let p1triangle = create_element(
             ElementFamily::Lagrange,
             bempp_element::cell::ReferenceCellType::Triangle,
@@ -367,6 +372,7 @@ mod test {
 
     #[test]
     fn test_counts() {
+        //! Test the point and cell counts
         let g = example_geometry();
         assert_eq!(g.point_count(), 4);
         assert_eq!(g.cell_count(), 2);
@@ -374,6 +380,7 @@ mod test {
 
     #[test]
     fn test_cell_points() {
+        //! Test the cell points
         let g = example_geometry();
         for (cell_i, points) in [
             vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![1.0, 1.0]],
@@ -397,6 +404,7 @@ mod test {
 
     #[test]
     fn test_counts_mixed() {
+        //! Test the point and cell counts
         let g = example_geometry_mixed();
         assert_eq!(g.point_count(), 5);
         assert_eq!(g.cell_count(), 2);
@@ -404,6 +412,7 @@ mod test {
 
     #[test]
     fn test_cell_points_mixed() {
+        //! Test the cell points
         let g = example_geometry_mixed();
         for (cell_i, points) in [
             (
@@ -432,6 +441,7 @@ mod test {
 
     #[test]
     fn test_midpoint() {
+        //! Test midpoints
         let g = example_geometry();
 
         let mut midpoint = vec![0.0; 2];
@@ -448,6 +458,7 @@ mod test {
 
     #[test]
     fn test_midpoint_mixed() {
+        //! Test midpoints
         let g = example_geometry_mixed();
 
         let mut midpoint = vec![0.0; 2];

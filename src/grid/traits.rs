@@ -60,10 +60,10 @@ pub trait Topology {
     /// Get the id of a cell from its index
     fn cell_index_to_id(&self, index: Self::IndexType) -> usize;
 
-    // Get the index of a vertex from its id
+    /// Get the index of a vertex from its id
     fn vertex_id_to_index(&self, id: usize) -> Self::IndexType;
 
-    // Get the index of a cell from its id
+    /// Get the index of a cell from its id
     fn cell_id_to_index(&self, id: usize) -> Self::IndexType;
 }
 
@@ -124,10 +124,10 @@ pub trait Geometry {
     /// Get the id of a cell from its index
     fn cell_index_to_id(&self, index: Self::IndexType) -> usize;
 
-    // Get the index of a point from its id
+    /// Get the index of a point from its id
     fn point_id_to_index(&self, id: usize) -> usize;
 
-    // Get the index of a cell from its id
+    /// Get the index of a cell from its id
     fn cell_id_to_index(&self, id: usize) -> Self::IndexType;
 }
 

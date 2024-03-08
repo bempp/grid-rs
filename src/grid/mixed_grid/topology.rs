@@ -26,7 +26,7 @@ fn all_in<T: Eq>(a: &[T], b: &[T]) -> bool {
 
 type IndexType = (ReferenceCellType, usize);
 
-/// Topology of a serial grid
+/// Topology of a mixed grid
 pub struct SerialMixedTopology {
     dim: usize,
     index_map: Vec<IndexType>,
@@ -43,6 +43,7 @@ pub struct SerialMixedTopology {
 unsafe impl Sync for SerialMixedTopology {}
 
 impl SerialMixedTopology {
+    /// Create a topology
     pub fn new(
         cells_input: &[usize],
         cell_types: &[ReferenceCellType],
@@ -312,6 +313,7 @@ mod test {
     use super::*;
 
     fn example_topology() -> SerialMixedTopology {
+        //! A topology with a single cell type
         SerialMixedTopology::new(
             &[0, 1, 2, 2, 1, 3],
             &[ReferenceCellType::Triangle; 2],
@@ -321,6 +323,7 @@ mod test {
     }
 
     fn example_topology_mixed() -> SerialMixedTopology {
+        //! A topology with a mixture of cell types
         SerialMixedTopology::new(
             &[0, 1, 2, 3, 1, 4, 3],
             &[
@@ -334,6 +337,7 @@ mod test {
 
     #[test]
     fn test_counts() {
+        //! Test entity counts
         let t = example_topology();
         assert_eq!(t.dim(), 2);
         assert_eq!(t.entity_count(ReferenceCellType::Point), 4);
@@ -343,6 +347,7 @@ mod test {
 
     #[test]
     fn test_cell_to_entities_vertices() {
+        //! Test cell vertices
         let t = example_topology();
         for (i, vertices) in [[0, 1, 2], [2, 1, 3]].iter().enumerate() {
             let c = t
@@ -358,7 +363,8 @@ mod test {
         }
     }
     #[test]
-    fn test_cell_to_entities_intervals() {
+    fn test_cell_to_entities_edges() {
+        //! Test cell edges
         let t = example_topology();
         for (i, edges) in [[0, 1, 2], [3, 4, 0]].iter().enumerate() {
             let c = t
@@ -374,7 +380,8 @@ mod test {
         }
     }
     #[test]
-    fn test_cell_to_entities_triangles() {
+    fn test_cell_to_entities_cells() {
+        //! Test cells
         let t = example_topology();
         for i in 0..2 {
             let c = t
@@ -388,6 +395,7 @@ mod test {
 
     #[test]
     fn test_mixed_counts() {
+        //! Test entity counts
         let t = example_topology_mixed();
         assert_eq!(t.dim(), 2);
         assert_eq!(t.entity_count(ReferenceCellType::Point), 5);
@@ -397,7 +405,8 @@ mod test {
     }
 
     #[test]
-    fn test_mixed_cell_entities_points() {
+    fn test_mixed_cell_entities_vertices() {
+        //! Test vertex-to-cell connectivity
         let t = example_topology_mixed();
         let c = t
             .cell_to_entities((ReferenceCellType::Quadrilateral, 0), 0)
@@ -423,7 +432,8 @@ mod test {
     }
 
     #[test]
-    fn test_mixed_cell_entities_intervals() {
+    fn test_mixed_cell_entities_edges() {
+        //! Test edge-to-cell connectivity
         let t = example_topology_mixed();
         let c = t
             .cell_to_entities((ReferenceCellType::Quadrilateral, 0), 1)
@@ -449,7 +459,8 @@ mod test {
         assert_eq!(c[2].1, 5);
     }
     #[test]
-    fn test_mixed_cell_entities_triangles() {
+    fn test_mixed_cell_entities_cells() {
+        //! Test cells
         let t = example_topology_mixed();
         let c = t
             .cell_to_entities((ReferenceCellType::Quadrilateral, 0), 2)

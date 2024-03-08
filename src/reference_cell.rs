@@ -84,7 +84,7 @@ pub fn edges(cell: ReferenceCellType) -> Vec<Vec<usize>> {
         ReferenceCellType::Triangle => vec![vec![1, 2], vec![0, 2], vec![0, 1]],
         ReferenceCellType::Quadrilateral => vec![vec![0, 1], vec![0, 2], vec![1, 3], vec![2, 3]],
         _ => {
-            panic!("Not implemented yet");
+            unimplemented!("edges({:?}) not yet implemented", cell);
         }
     }
 }
@@ -112,7 +112,7 @@ pub fn entity_types(cell: ReferenceCellType) -> Vec<Vec<ReferenceCellType>> {
             vec![],
         ],
         _ => {
-            panic!("Not implemented yet");
+            unimplemented!("entity_types({:?}) not yet implemented", cell);
         }
     }
 }
@@ -125,7 +125,7 @@ pub fn entity_counts(cell: ReferenceCellType) -> Vec<usize> {
         ReferenceCellType::Triangle => vec![3, 3, 1, 0],
         ReferenceCellType::Quadrilateral => vec![4, 4, 1, 0],
         _ => {
-            panic!("Not implemented yet");
+            unimplemented!("entity_counts({:?}) not yet implemented", cell);
         }
     }
 }
@@ -169,7 +169,7 @@ pub fn connectivity(cell: ReferenceCellType) -> Vec<Vec<Vec<Vec<usize>>>> {
             vec![vec![vec![0, 1, 2, 3], vec![0, 1, 2, 3], vec![0]]],
         ],
         _ => {
-            panic!("Not implemented yet");
+            unimplemented!("connectivity({:?}) not yet implemented", cell);
         }
     }
 }

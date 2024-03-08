@@ -1,4 +1,4 @@
-//! grid-rs
+//! Grid
 
 pub mod grid;
 pub mod reference_cell;

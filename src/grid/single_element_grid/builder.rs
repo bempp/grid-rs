@@ -16,6 +16,7 @@ use rlst_dense::{
 };
 use std::collections::HashMap;
 
+/// Grid builder for a single element grid
 pub struct SerialSingleElementGridBuilder<const GDIM: usize, T: Float + Scalar<Real = T>> {
     element_data: (ReferenceCellType, usize),
     points_per_cell: usize,

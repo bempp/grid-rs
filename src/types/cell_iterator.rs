@@ -2,12 +2,14 @@
 
 use crate::traits::grid::GridType;
 
+/// A cell iterator
 pub struct CellIterator<'a, Grid: GridType, Iter: std::iter::Iterator<Item = usize>> {
     iter: Iter,
     grid: &'a Grid,
 }
 
 impl<'a, Grid: GridType, Iter: std::iter::Iterator<Item = usize>> CellIterator<'a, Grid, Iter> {
+    /// Create a cell iterator
     pub fn new(iter: Iter, grid: &'a Grid) -> Self {
         CellIterator { iter, grid }
     }

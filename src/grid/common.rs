@@ -4,6 +4,7 @@ use crate::grid::traits::Geometry;
 use rlst_common::types::Scalar;
 use rlst_dense::traits::{Shape, UnsafeRandomAccessByRef};
 
+/// Compute a physical point
 pub fn compute_point<T: Scalar, Table: UnsafeRandomAccessByRef<4, Item = T> + Shape<4>>(
     geometry: &impl Geometry<T = T>,
     table: Table,
@@ -26,6 +27,7 @@ pub fn compute_point<T: Scalar, Table: UnsafeRandomAccessByRef<4, Item = T> + Sh
     }
 }
 
+/// Compute a Jacobian
 pub fn compute_jacobian<T: Scalar, Table: UnsafeRandomAccessByRef<4, Item = T> + Shape<4>>(
     geometry: &impl Geometry<T = T>,
     table: Table,
@@ -52,6 +54,7 @@ pub fn compute_jacobian<T: Scalar, Table: UnsafeRandomAccessByRef<4, Item = T> +
     }
 }
 
+/// Compute a normal from a Jacobian of a cell with topological dimension 2 and geometric dimension 3
 pub fn compute_normal_from_jacobian23<T: Scalar>(jacobian: &[T], normal: &mut [T]) {
     assert_eq!(jacobian.len(), 6);
     assert_eq!(normal.len(), 3);

@@ -23,7 +23,7 @@ fn all_in<T: Eq>(a: &[T], b: &[T]) -> bool {
     true
 }
 
-/// Topology of a serial grid
+/// Topology of a single element grid
 pub struct SerialSingleElementTopology {
     dim: usize,
     index_map: Vec<usize>,
@@ -40,6 +40,7 @@ pub struct SerialSingleElementTopology {
 unsafe impl Sync for SerialSingleElementTopology {}
 
 impl SerialSingleElementTopology {
+    /// Create a topology
     pub fn new(
         cells_input: &[usize],
         cell_type: ReferenceCellType,
@@ -238,6 +239,7 @@ mod test {
     use super::*;
 
     fn example_topology() -> SerialSingleElementTopology {
+        //! An example topology
         SerialSingleElementTopology::new(
             &[0, 1, 2, 2, 1, 3],
             ReferenceCellType::Triangle,
@@ -248,6 +250,7 @@ mod test {
 
     #[test]
     fn test_counts() {
+        //! Test entity counts
         let t = example_topology();
         assert_eq!(t.dim(), 2);
         assert_eq!(t.entity_count(ReferenceCellType::Point), 4);
@@ -256,7 +259,8 @@ mod test {
     }
 
     #[test]
-    fn test_cell_entities_points() {
+    fn test_cell_entities_vertices() {
+        //! Test cell vertices
         let t = example_topology();
         for (i, vertices) in [[0, 1, 2], [2, 1, 3]].iter().enumerate() {
             let c = t.cell_to_entities(i, 0).unwrap();
@@ -266,7 +270,8 @@ mod test {
     }
 
     #[test]
-    fn test_cell_entities_intervals() {
+    fn test_cell_entities_edges() {
+        //! Test cell edges
         let t = example_topology();
         for (i, edges) in [[0, 1, 2], [3, 4, 0]].iter().enumerate() {
             let c = t.cell_to_entities(i, 1).unwrap();
@@ -276,7 +281,8 @@ mod test {
     }
 
     #[test]
-    fn test_cell_entities_triangles() {
+    fn test_cell_entities_cells() {
+        //! Test cells
         let t = example_topology();
         for i in 0..2 {
             let c = t.cell_to_entities(i, 2).unwrap();
@@ -286,7 +292,8 @@ mod test {
     }
 
     #[test]
-    fn test_entities_to_cells_points() {
+    fn test_entities_to_cells_vertices() {
+        //! Test vertex-to-cell connectivity
         let t = example_topology();
         let c_to_e = (0..t.entity_count(ReferenceCellType::Triangle))
             .map(|i| t.cell_to_entities(i, 0).unwrap())
@@ -315,6 +322,7 @@ mod test {
 
     #[test]
     fn test_entities_to_cells_edges() {
+        //! Test edge-to-cell connectivity
         let t = example_topology();
         let c_to_e = (0..t.entity_count(ReferenceCellType::Triangle))
             .map(|i| t.cell_to_entities(i, 1).unwrap())

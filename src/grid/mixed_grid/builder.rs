@@ -16,6 +16,7 @@ use rlst_dense::{
 };
 use std::collections::HashMap;
 
+/// Grid builder for a mixed grid
 pub struct SerialMixedGridBuilder<const GDIM: usize, T: Float + Scalar<Real = T>> {
     elements_to_npoints: HashMap<(ReferenceCellType, usize), usize>,
     points: Vec<T>,

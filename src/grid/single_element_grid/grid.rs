@@ -1,4 +1,4 @@
-//! Serial implementation of a grid
+//! Single element grid
 
 use crate::grid::single_element_grid::{
     geometry::SerialSingleElementGeometry, topology::SerialSingleElementTopology,
@@ -19,7 +19,7 @@ use rlst_dense::{
 };
 use std::collections::HashMap;
 
-/// A serial grid
+/// A single element grid
 pub struct SerialSingleElementGrid<T: Float + Scalar> {
     topology: SerialSingleElementTopology,
     geometry: SerialSingleElementGeometry<T>,
@@ -29,6 +29,7 @@ impl<T: Float + Scalar> SerialSingleElementGrid<T>
 where
     for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
 {
+    /// Create a single element grid
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         points: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,

@@ -13,6 +13,7 @@ use rlst_dense::{
 };
 use std::collections::HashMap;
 
+/// Grid builder for a flat triangle grid
 pub struct SerialFlatTriangleGridBuilder<T: Float + Scalar<Real = T>> {
     points: Vec<T>,
     cells: Vec<usize>,

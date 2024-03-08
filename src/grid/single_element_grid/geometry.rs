@@ -16,7 +16,7 @@ use rlst_dense::{
 };
 use std::collections::HashMap;
 
-/// Geometry of a serial grid
+/// Geometry of a single element grid
 pub struct SerialSingleElementGeometry<T: Float + Scalar> {
     dim: usize,
     index_map: Vec<usize>,
@@ -36,6 +36,7 @@ pub struct SerialSingleElementGeometry<T: Float + Scalar> {
 unsafe impl<T: Float + Scalar> Sync for SerialSingleElementGeometry<T> {}
 
 impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
+    /// Create a geometry
     pub fn new(
         coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
         cells_input: &[usize],
@@ -193,6 +194,7 @@ impl<T: Float + Scalar> Geometry for SerialSingleElementGeometry<T> {
     }
 }
 
+/// Geometry evaluator for a single element grid
 pub struct GeometryEvaluatorSingleElement<'a, T: Float + Scalar> {
     geometry: &'a SerialSingleElementGeometry<T>,
     tdim: usize,
@@ -200,6 +202,7 @@ pub struct GeometryEvaluatorSingleElement<'a, T: Float + Scalar> {
 }
 
 impl<'a, T: Float + Scalar> GeometryEvaluatorSingleElement<'a, T> {
+    /// Create a geometry evaluator
     fn new(geometry: &'a SerialSingleElementGeometry<T>, points: &'a [T]) -> Self {
         let tdim = reference_cell::dim(geometry.element.cell_type());
         assert_eq!(points.len() % tdim, 0);
@@ -269,6 +272,7 @@ mod test {
     };
 
     fn example_geometry_2d() -> SerialSingleElementGeometry<f64> {
+        //! A 2D geometry
         let p1triangle = create_element(
             ElementFamily::Lagrange,
             ReferenceCellType::Triangle,
@@ -296,6 +300,7 @@ mod test {
     }
 
     fn example_geometry_3d() -> SerialSingleElementGeometry<f64> {
+        //! A 3D geometry
         let p2triangle = create_element(
             ElementFamily::Lagrange,
             ReferenceCellType::Triangle,
@@ -351,8 +356,19 @@ mod test {
         )
     }
 
+    fn triangle_points() -> Array<f64, BaseArray<f64, VectorContainer<f64>, 2>, 2> {
+        //! Create a set of points in the reference triangle
+        let mut points = rlst_dynamic_array2!(f64, [2, 2]);
+        *points.get_mut([0, 0]).unwrap() = 0.2;
+        *points.get_mut([0, 1]).unwrap() = 0.5;
+        *points.get_mut([1, 0]).unwrap() = 0.6;
+        *points.get_mut([1, 1]).unwrap() = 0.1;
+        points
+    }
+
     #[test]
     fn test_counts() {
+        //! Test the point and cell counts
         let g = example_geometry_2d();
         assert_eq!(g.point_count(), 4);
         assert_eq!(g.cell_count(), 2);
@@ -360,6 +376,7 @@ mod test {
 
     #[test]
     fn test_cell_points() {
+        //! Test the cell points
         let g = example_geometry_2d();
         for (cell_i, points) in [
             vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![1.0, 1.0]],
@@ -381,17 +398,9 @@ mod test {
         }
     }
 
-    fn triangle_points() -> Array<f64, BaseArray<f64, VectorContainer<f64>, 2>, 2> {
-        let mut points = rlst_dynamic_array2!(f64, [2, 2]);
-        *points.get_mut([0, 0]).unwrap() = 0.2;
-        *points.get_mut([0, 1]).unwrap() = 0.5;
-        *points.get_mut([1, 0]).unwrap() = 0.6;
-        *points.get_mut([1, 1]).unwrap() = 0.1;
-        points
-    }
-
     #[test]
     fn test_compute_point_2d() {
+        //! Test the compute_point function of an evaluator
         let g = example_geometry_2d();
         let points = triangle_points();
 
@@ -415,6 +424,7 @@ mod test {
 
     #[test]
     fn test_compute_point_3d() {
+        //! Test the compute_point function of an evaluator
         let g = example_geometry_3d();
         let points = triangle_points();
         let evaluator = g.get_evaluator(points.data());
@@ -438,6 +448,7 @@ mod test {
 
     #[test]
     fn test_compute_jacobian_3d() {
+        //! Test the compute_jacobian function of an evaluator
         let g = example_geometry_3d();
         let points = triangle_points();
         let evaluator = g.get_evaluator(points.data());
@@ -472,6 +483,7 @@ mod test {
     }
     #[test]
     fn test_compute_normal_3d() {
+        //! Test the compute_normal function of an evaluator
         let g = example_geometry_3d();
         let points = triangle_points();
         let evaluator = g.get_evaluator(points.data());
@@ -513,6 +525,7 @@ mod test {
 
     #[test]
     fn test_midpoint_2d() {
+        //! Test midpoints
         let g = example_geometry_2d();
 
         let mut midpoint = vec![0.0; 2];
@@ -529,6 +542,7 @@ mod test {
 
     #[test]
     fn test_midpoint_3d() {
+        //! Test midpoints
         let g = example_geometry_3d();
 
         let mut midpoint = vec![0.0; 3];

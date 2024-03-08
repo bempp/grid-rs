@@ -1,4 +1,4 @@
-//! Trait definitions.
+//! Trait definitions for a grid
 
 pub mod builder;
 pub mod cell;
