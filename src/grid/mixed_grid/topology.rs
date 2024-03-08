@@ -296,7 +296,11 @@ impl Topology for SerialMixedTopology {
         self.cell_indices_to_ids[&index]
     }
     fn vertex_id_to_index(&self, id: usize) -> IndexType {
-        self.vertex_ids_to_indices[&id]
+        if self.vertex_ids_to_indices.contains_key(&id) {
+            self.vertex_ids_to_indices[&id]
+        } else {
+            panic!("Vertex with id {} not found", id);
+        }
     }
     fn cell_id_to_index(&self, id: usize) -> IndexType {
         self.cell_ids_to_indices[&id]
