@@ -529,7 +529,7 @@ mod test {
 
         for cell_i in 0..2 {
             assert_relative_eq!(
-                g.diameter((0, cell_i)),
+                g.diameter(g.index_map()[cell_i]),
                 2.0 * f64::sqrt(1.5 - f64::sqrt(2.0)),
                 epsilon = 1e-12
             );
@@ -541,7 +541,23 @@ mod test {
             .iter()
             .enumerate()
         {
-            assert_relative_eq!(g.diameter((cell_i, 0)), d, epsilon = 1e-12);
+            assert_relative_eq!(g.diameter(g.index_map()[cell_i]), d, epsilon = 1e-12);
+        }
+    }
+
+    #[test]
+    fn test_volume() {
+        //! Test cell volumes
+        let g = example_geometry();
+
+        for cell_i in 0..2 {
+            assert_relative_eq!(g.volume(g.index_map()[cell_i]), 0.5, epsilon = 1e-12);
+        }
+
+        let g = example_geometry_mixed();
+
+        for (cell_i, d) in [1.0, 0.5].iter().enumerate() {
+            assert_relative_eq!(g.volume(g.index_map()[cell_i]), d, epsilon = 1e-12);
         }
     }
 }

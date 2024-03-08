@@ -72,6 +72,53 @@ pub fn compute_normal_from_jacobian23<T: Scalar>(jacobian: &[T], normal: &mut [T
     }
 }
 
+/// Compute the determinant of a matrix
+pub fn compute_det<T: Scalar<Real = T>>(jacobian: &[T], tdim: usize, gdim: usize) -> T {
+    assert_eq!(jacobian.len(), tdim * gdim);
+    match tdim {
+        1 => match gdim {
+            1 => T::abs(jacobian[0]),
+            2 => T::sqrt(jacobian.iter().map(|x| x.powi(2)).sum()),
+            3 => T::sqrt(jacobian.iter().map(|x| x.powi(2)).sum()),
+            _ => {
+                unimplemented!("compute_det() not implemented for topological dimension {tdim} and geometric dimension: {gdim}");
+            }
+        },
+        2 => match gdim {
+            2 => T::abs(jacobian[0] * jacobian[3] - jacobian[1] * jacobian[2]),
+            3 => T::sqrt(
+                [(1, 2), (2, 0), (0, 1)]
+                    .iter()
+                    .map(|(j, k)| {
+                        (jacobian[*j] * jacobian[3 + *k] - jacobian[*k] * jacobian[3 + *j]).powi(2)
+                    })
+                    .sum(),
+            ),
+            _ => {
+                unimplemented!("compute_det() not implemented for topological dimension {tdim} and geometric dimension: {gdim}");
+            }
+        },
+        3 => match gdim {
+            3 => T::abs(
+                [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
+                    .iter()
+                    .map(|(i, j, k)| {
+                        jacobian[*i]
+                            * (jacobian[3 + *j] * jacobian[6 + *k]
+                                - jacobian[3 + *k] * jacobian[6 + *j])
+                    })
+                    .sum(),
+            ),
+            _ => {
+                unimplemented!("compute_det() not implemented for topological dimension {tdim} and geometric dimension: {gdim}");
+            }
+        },
+        _ => {
+            unimplemented!("compute_det() not implemented for topological dimension {tdim}");
+        }
+    }
+}
+
 /// Compute the diameter of a triangle
 pub fn compute_diameter_triangle<
     T: Scalar<Real = T> + Float,

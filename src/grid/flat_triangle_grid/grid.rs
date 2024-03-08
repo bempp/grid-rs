@@ -804,7 +804,7 @@ mod test {
 
     #[test]
     fn test_diameter() {
-        //! Test diameters
+        //! Test cell diameters
         let g = example_grid_flat();
 
         for cell_i in 0..2 {
@@ -822,6 +822,22 @@ mod test {
             .enumerate()
         {
             assert_relative_eq!(g.diameter(cell_i), d, epsilon = 1e-12);
+        }
+    }
+
+    #[test]
+    fn test_volume() {
+        //! Test cell volumes
+        let g = example_grid_flat();
+
+        for cell_i in 0..2 {
+            assert_relative_eq!(g.volume(cell_i), 0.5, epsilon = 1e-12);
+        }
+
+        let g = example_grid_3d();
+
+        for (cell_i, d) in [f64::sqrt(0.75), 0.5].iter().enumerate() {
+            assert_relative_eq!(g.volume(cell_i), d, epsilon = 1e-12);
         }
     }
 }

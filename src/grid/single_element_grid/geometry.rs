@@ -1,13 +1,14 @@
 //! Implementation of grid geometry
 
 use crate::grid::common::{
-    compute_diameter_quadrilateral, compute_diameter_triangle, compute_jacobian,
+    compute_det, compute_diameter_quadrilateral, compute_diameter_triangle, compute_jacobian,
     compute_normal_from_jacobian23, compute_point,
 };
 use crate::grid::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
 use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
+use bempp_quadrature::simplex_rules::simplex_rule;
 use bempp_traits::element::FiniteElement;
 use num::Float;
 use rlst_common::types::Scalar;
@@ -51,6 +52,7 @@ impl<T: Float + Scalar<Real = T>> SerialSingleElementGeometry<T> {
         cell_ids_to_indices: HashMap<usize, usize>,
     ) -> Self {
         let dim = coordinates.shape()[1];
+        let tdim = reference_cell::dim(element.cell_type());
         let size = element.dim();
         let ncells = cells_input.len() / size;
 
@@ -58,32 +60,71 @@ impl<T: Float + Scalar<Real = T>> SerialSingleElementGeometry<T> {
         let mut cells = vec![];
         let mut midpoints = vec![vec![T::from(0.0).unwrap(); dim]; ncells];
         let mut diameters = vec![T::from(0.0).unwrap(); ncells];
-        let mut volumes = vec![];
+        let mut volumes = vec![T::from(0.0).unwrap(); ncells];
 
-        let mut table = rlst_dynamic_array4!(T, element.tabulate_array_shape(0, 1));
+        let mut mpt_table = rlst_dynamic_array4!(T, element.tabulate_array_shape(0, 1));
         element.tabulate(
-            &rlst_array_from_slice2!(
-                T,
-                &reference_cell::midpoint(element.cell_type()),
-                [1, reference_cell::dim(element.cell_type())]
-            ),
+            &rlst_array_from_slice2!(T, &reference_cell::midpoint(element.cell_type()), [1, tdim]),
             0,
-            &mut table,
+            &mut mpt_table,
         );
 
-        let mut start = 0;
+        // TODO: pick rule number of points sensibly
+        // NOTE: 37 used for now as rules with 37 points exist for both a triangle and a quadrilateral
+        let nqpts = 37;
+        let qrule = simplex_rule(element.cell_type(), nqpts).unwrap();
+        let qpoints = qrule
+            .points
+            .iter()
+            .map(|x| T::from(*x).unwrap())
+            .collect::<Vec<_>>();
+        let qweights = qrule
+            .weights
+            .iter()
+            .map(|x| T::from(*x).unwrap())
+            .collect::<Vec<_>>();
+
+        let mut jdet_table = rlst_dynamic_array4!(T, element.tabulate_array_shape(1, nqpts));
+        element.tabulate(
+            &rlst_array_from_slice2!(T, &qpoints, [nqpts, tdim], [tdim, 1]),
+            1,
+            &mut jdet_table,
+        );
+
+        let mut jacobian = vec![T::from(0.0).unwrap(); dim * tdim];
+
         for (cell_i, index) in index_map.iter_mut().enumerate() {
             *index = cell_i;
 
-            for (i, v) in cells_input[start..start + size].iter().enumerate() {
-                let t = unsafe { *table.get_unchecked([0, 0, i, 0]) };
+            for (i, v) in cells_input[size * cell_i..size * (cell_i + 1)]
+                .iter()
+                .enumerate()
+            {
+                let t = unsafe { *mpt_table.get_unchecked([0, 0, i, 0]) };
                 for (j, component) in midpoints[cell_i].iter_mut().enumerate() {
                     *component += unsafe { *coordinates.get_unchecked([*v, j]) } * t;
                 }
             }
-
-            volumes.push(T::from(0.0).unwrap()); // TODO
-            start += size;
+            for (point_index, w) in qweights.iter().enumerate() {
+                for component in jacobian.iter_mut() {
+                    *component = T::from(0.0).unwrap();
+                }
+                for (i, v) in cells_input[size * cell_i..size * (cell_i + 1)]
+                    .iter()
+                    .enumerate()
+                {
+                    for gd in 0..dim {
+                        for td in 0..tdim {
+                            jacobian[td * dim + gd] +=
+                                unsafe { *coordinates.get_unchecked([*v, gd]) }
+                                    * unsafe {
+                                        *jdet_table.get_unchecked([1 + td, point_index, i, 0])
+                                    };
+                        }
+                    }
+                }
+                volumes[cell_i] += *w * compute_det(&jacobian, tdim, dim);
+            }
         }
         cells.extend_from_slice(cells_input);
 
@@ -397,6 +438,44 @@ mod test {
         )
     }
 
+    fn example_geometry_quad() -> SerialSingleElementGeometry<f64> {
+        //! A 3D quadrilateral geometry
+        let p1quad = create_element(
+            ElementFamily::Lagrange,
+            ReferenceCellType::Quadrilateral,
+            1,
+            Continuity::Continuous,
+        );
+        let mut points = rlst_dynamic_array2!(f64, [6, 3]);
+        *points.get_mut([0, 0]).unwrap() = 0.0;
+        *points.get_mut([0, 1]).unwrap() = 0.0;
+        *points.get_mut([0, 2]).unwrap() = 0.0;
+        *points.get_mut([1, 0]).unwrap() = 1.0;
+        *points.get_mut([1, 1]).unwrap() = 0.0;
+        *points.get_mut([1, 2]).unwrap() = 0.0;
+        *points.get_mut([2, 0]).unwrap() = 2.0;
+        *points.get_mut([2, 1]).unwrap() = 0.0;
+        *points.get_mut([2, 2]).unwrap() = 1.0;
+        *points.get_mut([3, 0]).unwrap() = 0.0;
+        *points.get_mut([3, 1]).unwrap() = 1.0;
+        *points.get_mut([3, 2]).unwrap() = 0.0;
+        *points.get_mut([4, 0]).unwrap() = 1.0;
+        *points.get_mut([4, 1]).unwrap() = 1.0;
+        *points.get_mut([4, 2]).unwrap() = 0.0;
+        *points.get_mut([5, 0]).unwrap() = 2.0;
+        *points.get_mut([5, 1]).unwrap() = 1.0;
+        *points.get_mut([5, 2]).unwrap() = 1.0;
+        SerialSingleElementGeometry::new(
+            points,
+            &[0, 1, 3, 4, 1, 2, 4, 5],
+            p1quad,
+            vec![0, 1, 2, 3, 4, 5],
+            HashMap::from([(0, 0), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5)]),
+            vec![0, 1],
+            HashMap::from([(0, 0), (1, 1)]),
+        )
+    }
+
     fn triangle_points() -> Array<f64, BaseArray<f64, VectorContainer<f64>, 2>, 2> {
         //! Create a set of points in the reference triangle
         let mut points = rlst_dynamic_array2!(f64, [2, 2]);
@@ -622,6 +701,36 @@ mod test {
                 2.0 * f64::sqrt(1.5 - f64::sqrt(2.0)),
                 epsilon = 1e-12
             );
+        }
+    }
+
+    #[test]
+    fn test_volume() {
+        //! Test cell volumes
+        let g = example_geometry_2d();
+
+        for cell_i in 0..2 {
+            assert_relative_eq!(g.volume(cell_i), 0.5, epsilon = 1e-12);
+        }
+    }
+
+    #[test]
+    fn test_volume_3d() {
+        //! Test cell volumes
+        let g = example_geometry_3d();
+
+        for (cell_i, d) in [0.7390096708393067, 0.5].iter().enumerate() {
+            assert_relative_eq!(g.volume(cell_i), d, epsilon = 1e-5);
+        }
+    }
+
+    #[test]
+    fn test_volume_quad() {
+        //! Test cell volumes
+        let g = example_geometry_quad();
+
+        for (cell_i, d) in [1.0, f64::sqrt(2.0)].iter().enumerate() {
+            assert_relative_eq!(g.volume(cell_i), d, epsilon = 1e-5);
         }
     }
 }
