@@ -81,11 +81,10 @@ pub fn compute_diameter_triangle<
     v1: Array<T, ArrayImpl, 1>,
     v2: Array<T, ArrayImpl, 1>,
 ) -> T {
-    let a_norm = (v0.view() - v1.view()).norm_2();
-    let b_norm = (v0 - v2.view()).norm_2();
-    let c_norm = (v1 - v2).norm_2();
-    let s = (a_norm + b_norm + c_norm) / T::from(2.0).unwrap();
-    T::from(2.0).unwrap() * Scalar::sqrt(((s - a_norm) * (s - b_norm) * (s - c_norm)) / s)
+    let a = (v0.view() - v1.view()).norm_2();
+    let b = (v0 - v2.view()).norm_2();
+    let c = (v1 - v2).norm_2();
+    Scalar::sqrt((b + c - a) * (a + c - b) * (a + b - c) / (a + b + c))
 }
 
 /// Compute the diameter of a quadrilateral
