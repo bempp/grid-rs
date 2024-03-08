@@ -123,7 +123,7 @@ impl<T: Float + Scalar<Real = T>> SerialMixedGeometry<T> {
                             for (i, c) in v.iter_mut().enumerate() {
                                 *c = unsafe {
                                     *coordinates
-                                        .get_unchecked([cells[element_index][3 * cell_i + j], i])
+                                        .get_unchecked([cells[element_index][size * cell_i + j], i])
                                 };
                             }
                         }
@@ -141,7 +141,7 @@ impl<T: Float + Scalar<Real = T>> SerialMixedGeometry<T> {
                             for (i, c) in v.iter_mut().enumerate() {
                                 *c = unsafe {
                                     *coordinates
-                                        .get_unchecked([cells[element_index][4 * cell_i + j], i])
+                                        .get_unchecked([cells[element_index][size * cell_i + j], i])
                                 };
                             }
                         }
@@ -519,6 +519,29 @@ mod test {
             for (i, j) in midpoint.iter().zip(point) {
                 assert_relative_eq!(*i, *j, epsilon = 1e-12);
             }
+        }
+    }
+
+    #[test]
+    fn test_diameter() {
+        //! Test diameters
+        let g = example_geometry();
+
+        for cell_i in 0..2 {
+            assert_relative_eq!(
+                g.diameter((0, cell_i)),
+                2.0 * f64::sqrt(1.5 - f64::sqrt(2.0)),
+                epsilon = 1e-12
+            );
+        }
+
+        let g = example_geometry_mixed();
+
+        for (cell_i, d) in [f64::sqrt(2.0), 2.0 * f64::sqrt(1.5 - f64::sqrt(2.0))]
+            .iter()
+            .enumerate()
+        {
+            assert_relative_eq!(g.diameter((cell_i, 0)), d, epsilon = 1e-12);
         }
     }
 }

@@ -95,7 +95,9 @@ impl<T: Float + Scalar<Real = T>> SerialSingleElementGeometry<T> {
                 for cell_i in 0..ncells {
                     for (j, v) in [&mut v0, &mut v1, &mut v2].iter_mut().enumerate() {
                         for (i, c) in v.iter_mut().enumerate() {
-                            *c = unsafe { *coordinates.get_unchecked([cells[3 * cell_i + j], i]) };
+                            *c = unsafe {
+                                *coordinates.get_unchecked([cells[size * cell_i + j], i])
+                            };
                         }
                     }
                     diameters[cell_i] = compute_diameter_triangle(v0.view(), v1.view(), v2.view());
@@ -109,7 +111,9 @@ impl<T: Float + Scalar<Real = T>> SerialSingleElementGeometry<T> {
                 for cell_i in 0..ncells {
                     for (j, v) in [&mut v0, &mut v1, &mut v2, &mut v3].iter_mut().enumerate() {
                         for (i, c) in v.iter_mut().enumerate() {
-                            *c = unsafe { *coordinates.get_unchecked([cells[4 * cell_i + j], i]) };
+                            *c = unsafe {
+                                *coordinates.get_unchecked([cells[size * cell_i + j], i])
+                            };
                         }
                     }
                     diameters[cell_i] =
@@ -594,6 +598,30 @@ mod test {
             for (i, j) in midpoint.iter().zip(point) {
                 assert_relative_eq!(*i, *j, epsilon = 1e-12);
             }
+        }
+    }
+
+    #[test]
+    fn test_diameter() {
+        //! Test diameters
+        let g = example_geometry_2d();
+
+        for cell_i in 0..2 {
+            assert_relative_eq!(
+                g.diameter(cell_i),
+                2.0 * f64::sqrt(1.5 - f64::sqrt(2.0)),
+                epsilon = 1e-12
+            );
+        }
+
+        let g = example_geometry_3d();
+
+        for cell_i in 0..2 {
+            assert_relative_eq!(
+                g.diameter(cell_i),
+                2.0 * f64::sqrt(1.5 - f64::sqrt(2.0)),
+                epsilon = 1e-12
+            );
         }
     }
 }
