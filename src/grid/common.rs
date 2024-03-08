@@ -1,8 +1,12 @@
 //! Functionality common to multiple grid implementations
 
 use crate::grid::traits::Geometry;
+use num::Float;
 use rlst_common::types::Scalar;
-use rlst_dense::traits::{Shape, UnsafeRandomAccessByRef};
+use rlst_dense::{
+    array::Array,
+    traits::{Shape, UnsafeRandomAccessByRef, UnsafeRandomAccessByValue},
+};
 
 /// Compute a physical point
 pub fn compute_point<T: Scalar, Table: UnsafeRandomAccessByRef<4, Item = T> + Shape<4>>(
@@ -66,4 +70,33 @@ pub fn compute_normal_from_jacobian23<T: Scalar>(jacobian: &[T], normal: &mut [T
     for i in normal.iter_mut() {
         *i /= size;
     }
+}
+
+/// Compute the diameter of a triangle
+pub fn compute_diameter_triangle<
+    T: Scalar<Real = T> + Float,
+    ArrayImpl: UnsafeRandomAccessByValue<1, Item = T> + Shape<1>,
+>(
+    v0: Array<T, ArrayImpl, 1>,
+    v1: Array<T, ArrayImpl, 1>,
+    v2: Array<T, ArrayImpl, 1>,
+) -> T {
+    let a_norm = (v0.view() - v1.view()).norm_2();
+    let b_norm = (v0 - v2.view()).norm_2();
+    let c_norm = (v1 - v2).norm_2();
+    let s = (a_norm + b_norm + c_norm) / T::from(2.0).unwrap();
+    T::from(2.0).unwrap() * Scalar::sqrt(((s - a_norm) * (s - b_norm) * (s - c_norm)) / s)
+}
+
+/// Compute the diameter of a quadrilateral
+pub fn compute_diameter_quadrilateral<
+    T: Scalar<Real = T> + Float,
+    ArrayImpl: UnsafeRandomAccessByValue<1, Item = T> + Shape<1>,
+>(
+    v0: Array<T, ArrayImpl, 1>,
+    v1: Array<T, ArrayImpl, 1>,
+    v2: Array<T, ArrayImpl, 1>,
+    v3: Array<T, ArrayImpl, 1>,
+) -> T {
+    T::max((v0 - v3).norm_2(), (v1 - v2).norm_2())
 }

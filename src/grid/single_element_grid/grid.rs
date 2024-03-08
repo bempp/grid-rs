@@ -25,7 +25,7 @@ pub struct SerialSingleElementGrid<T: Float + Scalar> {
     geometry: SerialSingleElementGeometry<T>,
 }
 
-impl<T: Float + Scalar> SerialSingleElementGrid<T>
+impl<T: Float + Scalar<Real = T>> SerialSingleElementGrid<T>
 where
     for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
 {

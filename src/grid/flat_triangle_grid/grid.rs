@@ -1,5 +1,6 @@
 //! Flat triangle grid
 
+use crate::grid::common::compute_diameter_triangle;
 use crate::grid::traits::Ownership;
 use crate::grid::traits::{Geometry, GeometryEvaluator, Grid, Topology};
 use crate::reference_cell;
@@ -109,21 +110,13 @@ where
             jacobians[cell_i].view_mut().slice(1, 0).fill_from(a.view());
             jacobians[cell_i].view_mut().slice(1, 1).fill_from(b.view());
 
-            let a_norm = a.view().norm_2();
-            let b_norm = b.view().norm_2();
-            let c_norm = c.view().norm_2();
-
             a.cross(b.view(), normals[cell_i].view_mut());
 
             let normal_length = normals[cell_i].view().norm_2();
             normals[cell_i].scale_in_place(T::one() / normal_length);
 
             volumes[cell_i] = normal_length / T::from(2.0).unwrap();
-
-            let s = (a_norm + b_norm + c_norm) / T::from(2.0).unwrap();
-
-            diameters[cell_i] = T::from(2.0).unwrap()
-                * Scalar::sqrt(((s - a_norm) * (s - b_norm) * (s - c_norm)) / s);
+            diameters[cell_i] = compute_diameter_triangle(v0.view(), v1.view(), v1.view());
         }
 
         let element = create_element(
@@ -808,4 +801,5 @@ mod test {
             }
         }
     }
+
 }

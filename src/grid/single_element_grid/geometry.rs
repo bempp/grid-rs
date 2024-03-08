@@ -1,8 +1,12 @@
 //! Implementation of grid geometry
 
-use crate::grid::common::{compute_jacobian, compute_normal_from_jacobian23, compute_point};
+use crate::grid::common::{
+    compute_diameter_quadrilateral, compute_diameter_triangle, compute_jacobian,
+    compute_normal_from_jacobian23, compute_point,
+};
 use crate::grid::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
+use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
 use bempp_traits::element::FiniteElement;
 use num::Float;
@@ -11,8 +15,8 @@ use rlst_dense::{
     array::Array,
     base_array::BaseArray,
     data_container::VectorContainer,
-    rlst_array_from_slice2, rlst_dynamic_array4,
-    traits::{RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
+    rlst_array_from_slice2, rlst_dynamic_array1, rlst_dynamic_array4,
+    traits::{DefaultIteratorMut, RandomAccessByRef, Shape, UnsafeRandomAccessByRef},
 };
 use std::collections::HashMap;
 
@@ -33,9 +37,9 @@ pub struct SerialSingleElementGeometry<T: Float + Scalar> {
     cell_ids_to_indices: HashMap<usize, usize>,
 }
 
-unsafe impl<T: Float + Scalar> Sync for SerialSingleElementGeometry<T> {}
+unsafe impl<T: Float + Scalar<Real = T>> Sync for SerialSingleElementGeometry<T> {}
 
-impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
+impl<T: Float + Scalar<Real = T>> SerialSingleElementGeometry<T> {
     /// Create a geometry
     pub fn new(
         coordinates: Array<T, BaseArray<T, VectorContainer<T>, 2>, 2>,
@@ -53,7 +57,7 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
         let mut index_map = vec![0; ncells];
         let mut cells = vec![];
         let mut midpoints = vec![vec![T::from(0.0).unwrap(); dim]; ncells];
-        let mut diameters = vec![];
+        let mut diameters = vec![T::from(0.0).unwrap(); ncells];
         let mut volumes = vec![];
 
         let mut table = rlst_dynamic_array4!(T, element.tabulate_array_shape(0, 1));
@@ -78,11 +82,44 @@ impl<T: Float + Scalar> SerialSingleElementGeometry<T> {
                 }
             }
 
-            diameters.push(T::from(0.0).unwrap()); // TODO
             volumes.push(T::from(0.0).unwrap()); // TODO
             start += size;
         }
         cells.extend_from_slice(cells_input);
+
+        match element.cell_type() {
+            ReferenceCellType::Triangle => {
+                let mut v0 = rlst_dynamic_array1!(T, [dim]);
+                let mut v1 = rlst_dynamic_array1!(T, [dim]);
+                let mut v2 = rlst_dynamic_array1!(T, [dim]);
+                for cell_i in 0..ncells {
+                    for (j, v) in [&mut v0, &mut v1, &mut v2].iter_mut().enumerate() {
+                        for (i, c) in v.iter_mut().enumerate() {
+                            *c = unsafe { *coordinates.get_unchecked([cells[3 * cell_i + j], i]) };
+                        }
+                    }
+                    diameters[cell_i] = compute_diameter_triangle(v0.view(), v1.view(), v2.view());
+                }
+            }
+            ReferenceCellType::Quadrilateral => {
+                let mut v0 = rlst_dynamic_array1!(T, [dim]);
+                let mut v1 = rlst_dynamic_array1!(T, [dim]);
+                let mut v2 = rlst_dynamic_array1!(T, [dim]);
+                let mut v3 = rlst_dynamic_array1!(T, [dim]);
+                for cell_i in 0..ncells {
+                    for (j, v) in [&mut v0, &mut v1, &mut v2, &mut v3].iter_mut().enumerate() {
+                        for (i, c) in v.iter_mut().enumerate() {
+                            *c = unsafe { *coordinates.get_unchecked([cells[4 * cell_i + j], i]) };
+                        }
+                    }
+                    diameters[cell_i] =
+                        compute_diameter_quadrilateral(v0.view(), v1.view(), v2.view(), v3.view());
+                }
+            }
+            _ => {
+                panic!("Unsupported cell type: {:?}", element.cell_type());
+            }
+        }
 
         let cell_indices = (0..ncells).collect::<Vec<_>>();
 

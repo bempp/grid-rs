@@ -18,12 +18,12 @@ use rlst_dense::{
 use std::collections::HashMap;
 
 /// A mixed grid
-pub struct SerialMixedGrid<T: Float + Scalar> {
+pub struct SerialMixedGrid<T: Float + Scalar<Real = T>> {
     topology: SerialMixedTopology,
     geometry: SerialMixedGeometry<T>,
 }
 
-impl<T: Float + Scalar> SerialMixedGrid<T>
+impl<T: Float + Scalar<Real = T>> SerialMixedGrid<T>
 where
     for<'a> Array<T, ArrayViewMut<'a, T, BaseArray<T, VectorContainer<T>, 2>, 2>, 2>: MatrixInverse,
 {
@@ -89,7 +89,7 @@ where
     }
 }
 
-impl<T: Float + Scalar> Grid for SerialMixedGrid<T> {
+impl<T: Float + Scalar<Real = T>> Grid for SerialMixedGrid<T> {
     type T = T;
     type Topology = SerialMixedTopology;
     type Geometry = SerialMixedGeometry<T>;
