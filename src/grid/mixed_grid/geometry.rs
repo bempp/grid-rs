@@ -1,13 +1,14 @@
 //! Implementation of grid geometry
 
 use crate::grid::common::{
-    compute_diameter_quadrilateral, compute_diameter_triangle, compute_jacobian,
+    compute_det, compute_diameter_quadrilateral, compute_diameter_triangle, compute_jacobian,
     compute_normal_from_jacobian23, compute_point,
 };
 use crate::grid::traits::{Geometry, GeometryEvaluator};
 use crate::reference_cell;
 use crate::types::ReferenceCellType;
 use bempp_element::element::CiarletElement;
+use bempp_quadrature::simplex_rules::simplex_rule;
 use bempp_traits::element::FiniteElement;
 use num::Float;
 use rlst_common::types::Scalar;
@@ -85,29 +86,68 @@ impl<T: Float + Scalar<Real = T>> SerialMixedGeometry<T> {
         for (element_index, e) in elements.iter().enumerate() {
             let ncells = cells[element_index].len() / e.dim();
             let size = e.dim();
+            let tdim = reference_cell::dim(e.cell_type());
 
             midpoints[element_index] = vec![vec![T::from(0.0).unwrap(); dim]; ncells];
             diameters[element_index] = vec![T::from(0.0).unwrap(); ncells];
-            volumes[element_index] = vec![T::from(0.0).unwrap(); ncells]; // TODO
+            volumes[element_index] = vec![T::from(0.0).unwrap(); ncells];
 
-            let mut table = rlst_dynamic_array4!(T, e.tabulate_array_shape(0, 1));
+            let mut mpt_table = rlst_dynamic_array4!(T, e.tabulate_array_shape(0, 1));
             e.tabulate(
-                &rlst_array_from_slice2!(
-                    T,
-                    &reference_cell::midpoint(e.cell_type()),
-                    [1, reference_cell::dim(e.cell_type())]
-                ),
+                &rlst_array_from_slice2!(T, &reference_cell::midpoint(e.cell_type()), [1, tdim]),
                 0,
-                &mut table,
+                &mut mpt_table,
             );
+
+            // TODO: pick rule number of points sensibly
+            // NOTE: 37 used for now as rules with 37 points exist for both a triangle and a quadrilateral
+            let nqpts = 37;
+            let qrule = simplex_rule(e.cell_type(), nqpts).unwrap();
+            let qpoints = qrule
+                .points
+                .iter()
+                .map(|x| T::from(*x).unwrap())
+                .collect::<Vec<_>>();
+            let qweights = qrule
+                .weights
+                .iter()
+                .map(|x| T::from(*x).unwrap())
+                .collect::<Vec<_>>();
+
+            let mut jdet_table = rlst_dynamic_array4!(T, e.tabulate_array_shape(1, nqpts));
+            e.tabulate(
+                &rlst_array_from_slice2!(T, &qpoints, [nqpts, tdim], [tdim, 1]),
+                1,
+                &mut jdet_table,
+            );
+
+            let mut jacobian = vec![T::from(0.0).unwrap(); dim * tdim];
 
             let mut start = 0;
             for cell_i in 0..ncells {
                 for (i, v) in cells[element_index][start..start + size].iter().enumerate() {
-                    let t = unsafe { *table.get_unchecked([0, 0, i, 0]) };
+                    let t = unsafe { *mpt_table.get_unchecked([0, 0, i, 0]) };
                     for (j, component) in midpoints[element_index][cell_i].iter_mut().enumerate() {
                         *component += unsafe { *coordinates.get_unchecked([*v, j]) } * t;
                     }
+                }
+
+                for (point_index, w) in qweights.iter().enumerate() {
+                    for component in jacobian.iter_mut() {
+                        *component = T::from(0.0).unwrap();
+                    }
+                    for (i, v) in cells[element_index][start..start + size].iter().enumerate() {
+                        for gd in 0..dim {
+                            for td in 0..tdim {
+                                jacobian[td * dim + gd] +=
+                                    unsafe { *coordinates.get_unchecked([*v, gd]) }
+                                        * unsafe {
+                                            *jdet_table.get_unchecked([1 + td, point_index, i, 0])
+                                        };
+                            }
+                        }
+                    }
+                    volumes[element_index][cell_i] += *w * compute_det(&jacobian, tdim, dim);
                 }
 
                 start += size;
