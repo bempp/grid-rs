@@ -1,13 +1,15 @@
-//! Iterator over vertices
+//! Iterator over points
 
 use crate::traits::grid::GridType;
 
+/// An iterator over points
 pub struct PointIterator<'a, Grid: GridType, Iter: std::iter::Iterator<Item = usize>> {
     iter: Iter,
     grid: &'a Grid,
 }
 
 impl<'a, Grid: GridType, Iter: std::iter::Iterator<Item = usize>> PointIterator<'a, Grid, Iter> {
+    /// Create an iterator over points
     pub fn new(iter: Iter, grid: &'a Grid) -> Self {
         Self { iter, grid }
     }
